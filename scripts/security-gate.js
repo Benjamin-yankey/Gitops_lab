@@ -3,7 +3,7 @@ const fs = require('fs');
 
 // Define default paths for security reports
 const files = {
-  sca: process.env.SCA_REPORT || 'reports/sca/dependency-check-report.json',
+  sca: process.env.SCA_REPORT || 'reports/sca/npm-audit-report.json',
   image: process.env.IMAGE_REPORT || 'reports/image/trivy-image.json',
   secret: process.env.SECRET_REPORT || 'reports/secret/gitleaks-report.json'
 };
@@ -24,19 +24,17 @@ function safeReadJson(path) {
 }
 
 /**
- * Counts vulnerabilities from OWASP Dependency-Check report
- * @param {object} report - Parsed SCA report
- * @returns {object} - Counts of CRITICAL and HIGH vulnerabilities
+ * Counts vulnerabilities from npm audit report
+ * @param {object} report - Parsed npm audit report
+ * @returns {object} - Counts of critical and high vulnerabilities
  */
-function countDependencyCheck(report) {
+function countNpmAudit(report) {
   const counts = { CRITICAL: 0, HIGH: 0 };
-  const dependencies = report.dependencies || [];
-  for (const dep of dependencies) {
-    for (const vuln of dep.vulnerabilities || []) {
-      const sev = String(vuln.severity || '').toUpperCase();
-      if (counts[sev] !== undefined) counts[sev] += 1;
-    }
-  }
+  const vulns = (report.metadata && report.metadata.vulnerabilities) || {};
+  
+  counts.CRITICAL = vulns.critical || 0;
+  counts.HIGH = vulns.high || 0;
+  
   return counts;
 }
 
@@ -86,7 +84,7 @@ try {
   const secret = safeReadJson(files.secret);
 
   // Process vulnerability data
-  const scaCounts = countDependencyCheck(sca);
+  const scaCounts = countNpmAudit(sca);
   const imageCounts = countTrivy(image);
   const total = mergeCounts(scaCounts, imageCounts);
   const secretCount = countGitleaks(secret);

@@ -170,40 +170,13 @@ pipeline {
             }
         }
 
-        // Step 9: Software Composition Analysis (SCA) with OWASP Dependency-Check
-        stage('SCA - OWASP Dependency-Check') {
+        // Step 9: Software Composition Analysis (SCA) with npm audit
+        stage('SCA - npm audit') {
             steps {
-                script {
-                    // 1. Identify if the 'ben' key is available
-                    def nvdKey = null
-                    try {
-                        withCredentials([string(credentialsId: 'ben', variable: 'KEY')]) { nvdKey = KEY }
-                        echo "NVD API Key 'ben' verified."
-                    } catch (Exception e) {
-                        try {
-                            withCredentials([usernamePassword(credentialsId: 'ben', usernameVariable: 'U', passwordVariable: 'P')]) { nvdKey = P }
-                            echo "NVD API Key 'ben' verified (Password type)."
-                        } catch (Exception e2) {
-                            echo "Warning: NVD Key 'ben' not found. Downloads will be slow."
-                        }
-                    }
-
-                    // 2. Execute the scan with proper quoting for the space in 'James Mills'
-                    // We use the same -v pattern that worked in the 'Install' stage.
-                    def apiFlag = nvdKey ? "--nvdApiKey '${nvdKey}'" : ""
-                    sh """
-                        docker run --rm \
-                          -v "${env.HOST_WORKSPACE}:/src" \
-                          -v "/opt/jenkins_home/nvd-cache:/usr/share/dependency-check/data" \
-                          owasp/dependency-check:latest \
-                          --scan /src \
-                          --project "${env.APP_NAME}" \
-                          --format JSON \
-                          --format HTML \
-                          --out "/src/${env.SCA_DIR}" \
-                          ${apiFlag}
-                    """
-                }
+                sh '''
+                  docker run --rm -v "${HOST_WORKSPACE}:/work" -w /work node:20-alpine \
+                    sh -lc "npm audit --omit=dev --json > ${SCA_DIR}/npm-audit-report.json || true"
+                '''
             }
         }
 
