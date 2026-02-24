@@ -28,7 +28,7 @@ The pipeline performs:
 - **Build and unit test**: `Jenkinsfile` runs `npm ci` and `npm test -- --coverage` to validate code before any image push or deployment.
 - **SAST (SonarQube + Quality Gate)**: `Jenkinsfile` runs `sonar-scanner` and then `waitForQualityGate abortPipeline: true` to stop the pipeline if quality/security thresholds fail.
 - **SCA (OWASP Dependency-Check)**: `Jenkinsfile` runs `owasp/dependency-check` in Docker and writes JSON/HTML reports to `reports/sca/`.
-- **Secret scan (Gitleaks)**: `Jenkinsfile` runs `${GITLEAKS_IMAGE}` (default `zricethezav/gitleaks:latest`) and outputs findings to `reports/secret/gitleaks-report.json`.
+- **Secret scan (Gitleaks)**: `Jenkinsfile` runs `${GITLEAKS_IMAGE}` (default/fallback `ghcr.io/gitleaks/gitleaks:latest`) and outputs findings to `reports/secret/gitleaks-report.json`.
 - **Image scan (Trivy)**: After building the app image, `Jenkinsfile` runs Trivy and writes `reports/image/trivy-image.json`.
 - **SBOM generation (Syft CycloneDX)**: `Jenkinsfile` runs Syft and writes CycloneDX SBOM to `reports/sbom/sbom-cyclonedx.json`.
 - **Policy gate (block on CRITICAL/HIGH or secrets)**: `scripts/security-gate.js` parses SCA, Trivy, and Gitleaks reports and exits non-zero if blocked findings exist; `Jenkinsfile` fails at `Security Gate`.
