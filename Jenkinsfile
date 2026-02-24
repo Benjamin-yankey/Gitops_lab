@@ -160,30 +160,27 @@ pipeline {
         stage('SCA - OWASP Dependency-Check') {
             steps {
                 script {
+                    // Define the base scanner command
+                    def scannerCmd = "docker run --rm -v \"${env.HOST_WORKSPACE}:/src\" owasp/dependency-check:latest --scan /src --project \"${env.APP_NAME}\" --format JSON --format HTML --out \"/src/${env.SCA_DIR}\""
+                    
                     try {
-                        withCredentials([string(credentialsId: 'ben', variable: 'NVD_API_KEY')]) {
-                            sh '''
-                              docker run --rm -v "${HOST_WORKSPACE}:/src" \
-                                -e NVD_API_KEY="${NVD_API_KEY}" \
-                                owasp/dependency-check:latest \
-                                --scan /src \
-                                --project "${APP_NAME}" \
-                                --format JSON \
-                                --format HTML \
-                                --out "/src/${SCA_DIR}" \
-                                --nvdApiKey "${NVD_API_KEY}"
-                            '''
+                        // Attempt to use 'ben' as a Secret Text credential
+                        withCredentials([string(credentialsId: 'ben', variable: 'NVD_KEY')]) {
+                            echo "Applying NVD API Key from Secret Text 'ben'..."
+                            sh "${scannerCmd} --nvdApiKey \"\$NVD_KEY\""
                         }
-                    } catch (Exception e) {
-                        echo "Warning: NVD API Key 'ben' not found or failed. Running without API key (may be subject to rate limits)."
-                        sh '''
-                          docker run --rm -v "${HOST_WORKSPACE}:/src" owasp/dependency-check:latest \
-                            --scan /src \
-                            --project "${APP_NAME}" \
-                            --format JSON \
-                            --format HTML \
-                            --out "/src/${SCA_DIR}"
-                        '''
+                    } catch (Exception e1) {
+                        try {
+                            // Fallback: Attempt to use 'ben' as a Username/Password credential (using password as the key)
+                            withCredentials([usernamePassword(credentialsId: 'ben', usernameVariable: 'U', passwordVariable: 'P')]) {
+                                echo "Applying NVD API Key from Password credential 'ben'..."
+                                sh "${scannerCmd} --nvdApiKey \"\$P\""
+                            }
+                        } catch (Exception e2) {
+                            // Final Fallback: Run without API key
+                            echo "Warning: NVD API Key 'ben' not found. Proceeding with scan (subject to rate limits)."
+                            sh scannerCmd
+                        }
                     }
                 }
             }
