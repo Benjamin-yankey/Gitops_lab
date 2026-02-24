@@ -57,10 +57,13 @@ docker pull jenkins/jenkins:lts-jdk17
 docker run -d \
   --name jenkins \
   --restart unless-stopped \
+  -u root \
   -p 8080:8080 \
   -p 50000:50000 \
   -e JENKINS_ADMIN_ID=admin \
   -e JENKINS_ADMIN_PASSWORD="$${JENKINS_PASSWORD}" \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v /usr/bin/docker:/usr/bin/docker \
   -v /opt/jenkins_home:/var/jenkins_home \
   -v /opt/jenkins_init:/usr/share/jenkins/ref/init.groovy.d \
   jenkins/jenkins:lts-jdk17
