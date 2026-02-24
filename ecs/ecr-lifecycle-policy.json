@@ -1,0 +1,30 @@
+{
+  "rules": [
+    {
+      "rulePriority": 1,
+      "description": "Expire untagged images older than 7 days",
+      "selection": {
+        "tagStatus": "untagged",
+        "countType": "sinceImagePushed",
+        "countUnit": "days",
+        "countNumber": 7
+      },
+      "action": {
+        "type": "expire"
+      }
+    },
+    {
+      "rulePriority": 2,
+      "description": "Retain only 20 tagged images",
+      "selection": {
+        "tagStatus": "tagged",
+        "tagPrefixList": ["build-", "sha-", "latest"],
+        "countType": "imageCountMoreThan",
+        "countNumber": 20
+      },
+      "action": {
+        "type": "expire"
+      }
+    }
+  ]
+}

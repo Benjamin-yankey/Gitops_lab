@@ -1,0 +1,27 @@
+# Node
+node_modules/
+npm-debug.log*
+
+# Terraform local data and state
+terraform/.terraform/
+**/.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+.terraform.lock.hcl
+
+# Keys and secrets
+*.pem
+*.key
+*.p12
+*.env
+.env.*
+
+# Build/test artifacts
+coverage/
+reports/**/*.xml
+
+# OS/editor
+.DS_Store
+.vscode/
