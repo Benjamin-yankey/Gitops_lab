@@ -89,6 +89,20 @@ pipeline {
             }
         }
 
+        // Step 3.1: Lint the Dockerfile for best practices
+        stage('Lint Dockerfile') {
+            steps {
+                sh 'docker run --rm -i hadolint/hadolint < Dockerfile'
+            }
+        }
+
+        // Step 3.2: Lint shell scripts for common errors
+        stage('Lint Scripts') {
+            steps {
+                sh 'docker run --rm -v "${HOST_WORKSPACE}:/mnt" -w /mnt koalaman/shellcheck:latest scripts/*.sh'
+            }
+        }
+
         // Step 4: Install application dependencies
         stage('Install') {
             steps {
@@ -160,53 +174,35 @@ pipeline {
         stage('SCA - OWASP Dependency-Check') {
             steps {
                 script {
-                    echo "Checking for NVD API Key 'ben'..."
-                    // Try to get the key as a Secret Text (standard)
+                    // 1. Identify if the 'ben' key is available
+                    def nvdKey = null
                     try {
-                        withCredentials([string(credentialsId: 'ben', variable: 'NVD_KEY')]) {
-                            echo "NVD API Key found (Secret Text). Starting accelerated scan..."
-                            sh """
-                              docker run --rm -v \"${env.HOST_WORKSPACE}:/src\" \
-                                -e NVD_API_KEY=\"\$NVD_KEY\" \
-                                owasp/dependency-check:latest \
-                                --scan /src \
-                                --project \"${env.APP_NAME}\" \
-                                --format JSON \
-                                --format HTML \
-                                --out \"/src/${env.SCA_DIR}\" \
-                                --nvdApiKey \"\$NVD_KEY\"
-                            """
-                        }
+                        withCredentials([string(credentialsId: 'ben', variable: 'KEY')]) { nvdKey = KEY }
+                        echo "NVD API Key 'ben' verified."
                     } catch (Exception e) {
-                        // Fallback to Username/Password if not found as Secret Text
                         try {
-                            withCredentials([usernamePassword(credentialsId: 'ben', usernameVariable: 'U', passwordVariable: 'P')]) {
-                                echo "NVD API Key found (Password Type). Starting accelerated scan..."
-                                sh """
-                                  docker run --rm -v \"${env.HOST_WORKSPACE}:/src\" \
-                                    -e NVD_API_KEY=\"\$P\" \
-                                    owasp/dependency-check:latest \
-                                    --scan /src \
-                                    --project \"${env.APP_NAME}\" \
-                                    --format JSON \
-                                    --format HTML \
-                                    --out \"/src/${env.SCA_DIR}\" \
-                                    --nvdApiKey \"\$P\"
-                                """
-                            }
+                            withCredentials([usernamePassword(credentialsId: 'ben', usernameVariable: 'U', passwordVariable: 'P')]) { nvdKey = P }
+                            echo "NVD API Key 'ben' verified (Password type)."
                         } catch (Exception e2) {
-                            echo "Warning: NVD Key 'ben' not found. This update will be VERY slow."
-                            sh """
-                              docker run --rm -v \"${env.HOST_WORKSPACE}:/src\" \
-                                owasp/dependency-check:latest \
-                                --scan /src \
-                                --project \"${env.APP_NAME}\" \
-                                --format JSON \
-                                --format HTML \
-                                --out \"/src/${env.SCA_DIR}\"
-                            """
+                            echo "Warning: NVD Key 'ben' not found. Downloads will be slow."
                         }
                     }
+
+                    // 2. Execute the scan with proper quoting for the space in 'James Mills'
+                    // We use the same -v pattern that worked in the 'Install' stage.
+                    def apiFlag = nvdKey ? "--nvdApiKey '${nvdKey}'" : ""
+                    sh """
+                        docker run --rm \
+                          -v "${env.HOST_WORKSPACE}:/src" \
+                          -v "/opt/jenkins_home/nvd-cache:/usr/share/dependency-check/data" \
+                          owasp/dependency-check:latest \
+                          --scan /src \
+                          --project "${env.APP_NAME}" \
+                          --format JSON \
+                          --format HTML \
+                          --out "/src/${env.SCA_DIR}" \
+                          ${apiFlag}
+                    """
                 }
             }
         }

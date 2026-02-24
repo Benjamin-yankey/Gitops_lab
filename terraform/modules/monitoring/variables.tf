@@ -24,8 +24,26 @@ variable "vpc_id" {
   type        = string
 }
 
+variable "ecs_cluster_name" {
+  description = "ECS cluster name"
+  type        = string
+  default     = ""
+}
+
+variable "ecs_service_name" {
+  description = "ECS service name"
+  type        = string
+  default     = ""
+}
+
 variable "enable_ec2_app_alarm" {
   description = "Whether to create the EC2 app CPU alarm (disable when using ECS)"
+  type        = bool
+  default     = true
+}
+
+variable "enable_ecs_alarms" {
+  description = "Whether to create the ECS service CPU/Memory alarms"
   type        = bool
   default     = true
 }

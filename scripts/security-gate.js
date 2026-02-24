@@ -101,7 +101,11 @@ try {
   const hasSecrets = secretCount > 0;
 
   if (hasBlockedVulns || hasSecrets) {
-    console.error('Security gate failed. Critical/High vulnerabilities or secrets were detected.');
+    console.error('---------------------------------------------------------');
+    console.error('❌ SECURITY GATE FAILED');
+    console.error(`Reason: ${hasBlockedVulns ? 'Critical/High vulnerabilities' : ''}${hasBlockedVulns && hasSecrets ? ' and ' : ''}${hasSecrets ? 'Secrets' : ''} detected.`);
+    console.error(`Summary: Critical=${total.CRITICAL}, High=${total.HIGH}, Secrets=${secretCount}`);
+    console.error('---------------------------------------------------------');
     process.exit(1);
   }
 

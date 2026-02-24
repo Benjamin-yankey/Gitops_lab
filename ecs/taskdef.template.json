@@ -28,6 +28,12 @@
           "value": "__APP_VERSION__"
         }
       ],
+      "readonlyRootFilesystem": true,
+      "linuxParameters": {
+        "capabilities": {
+          "drop": ["ALL"]
+        }
+      },
       "logConfiguration": {
         "logDriver": "awslogs",
         "options": {

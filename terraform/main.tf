@@ -202,10 +202,13 @@ module "app_server" {
 module "monitoring" {
   source = "./modules/monitoring"
 
-  project_name         = var.project_name
-  environment          = var.environment
-  jenkins_instance_id  = module.jenkins.instance_id
-  app_instance_id      = module.app_server.instance_id
-  vpc_id               = module.vpc.vpc_id
-  enable_ec2_app_alarm = true
+  project_name      = var.project_name
+  environment       = var.environment
+  jenkins_instance_id = module.jenkins.instance_id
+  app_instance_id   = module.app_server.instance_id
+  vpc_id            = module.vpc.vpc_id
+  ecs_cluster_name  = module.ecs.cluster_name
+  ecs_service_name  = module.ecs.service_name
+  enable_ec2_app_alarm = false
+  enable_ecs_alarms = true
 }

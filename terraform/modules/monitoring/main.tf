@@ -110,3 +110,51 @@ resource "aws_iam_role_policy" "flow_logs" {
     }]
   })
 }
+
+resource "aws_cloudwatch_metric_alarm" "ecs_cpu" {
+  count = var.enable_ecs_alarms ? 1 : 0
+
+  alarm_name          = "${var.project_name}-${var.environment}-ecs-high-cpu"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 2
+  metric_name         = "CPUUtilization"
+  namespace           = "AWS/ECS"
+  period              = 300
+  statistic           = "Average"
+  threshold           = 80
+
+  dimensions = {
+    ClusterName = var.ecs_cluster_name
+    ServiceName = var.ecs_service_name
+  }
+
+  alarm_description = "Alert when ECS service CPU exceeds 80%"
+
+  tags = {
+    Name = "${var.project_name}-${var.environment}-ecs-cpu-alarm"
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "ecs_memory" {
+  count = var.enable_ecs_alarms ? 1 : 0
+
+  alarm_name          = "${var.project_name}-${var.environment}-ecs-high-memory"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 2
+  metric_name         = "MemoryUtilization"
+  namespace           = "AWS/ECS"
+  period              = 300
+  statistic           = "Average"
+  threshold           = 80
+
+  dimensions = {
+    ClusterName = var.ecs_cluster_name
+    ServiceName = var.ecs_service_name
+  }
+
+  alarm_description = "Alert when ECS service memory exceeds 80%"
+
+  tags = {
+    Name = "${var.project_name}-${var.environment}-ecs-memory-alarm"
+  }
+}
