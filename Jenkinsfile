@@ -10,13 +10,13 @@ pipeline {
     // Define configurable parameters for the pipeline
     parameters {
         string(name: 'AWS_REGION', defaultValue: 'eu-central-1', description: 'AWS region for ECR/ECS')
-        string(name: 'AWS_ACCOUNT_ID', defaultValue: '', description: 'AWS account ID hosting ECR/ECS')
+        string(name: 'AWS_ACCOUNT_ID', defaultValue: '615299752577', description: 'AWS account ID hosting ECR/ECS')
         string(name: 'ECR_REPOSITORY', defaultValue: 'cicd-node-app', description: 'ECR repository name')
         string(name: 'ECS_CLUSTER', defaultValue: 'cicd-node-cluster', description: 'ECS cluster name')
         string(name: 'ECS_SERVICE', defaultValue: 'cicd-node-service', description: 'ECS service name')
         string(name: 'ECS_TASK_FAMILY', defaultValue: 'cicd-node-app', description: 'ECS task definition family')
-        string(name: 'ECS_EXECUTION_ROLE_ARN', defaultValue: '', description: 'ECS task execution role ARN')
-        string(name: 'ECS_TASK_ROLE_ARN', defaultValue: '', description: 'ECS task role ARN')
+        string(name: 'ECS_EXECUTION_ROLE_ARN', defaultValue: 'arn:aws:iam::615299752577:role/cicd-pipeline-dev-ecs-exec-role', description: 'ECS task execution role ARN')
+        string(name: 'ECS_TASK_ROLE_ARN', defaultValue: 'arn:aws:iam::615299752577:role/cicd-pipeline-dev-ecs-task-role', description: 'ECS task role ARN')
         string(name: 'CLOUDWATCH_LOG_GROUP', defaultValue: '/ecs/cicd-node-app', description: 'CloudWatch log group for ECS container logs')
         booleanParam(name: 'ENABLE_SONARQUBE', defaultValue: false, description: 'Run SonarQube analysis and quality gate (requires Jenkins SonarQube plugin/config)')
         string(name: 'SONARQUBE_SERVER', defaultValue: 'sonarqube', description: 'Jenkins SonarQube server configuration name')
