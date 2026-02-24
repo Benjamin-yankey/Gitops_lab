@@ -159,14 +159,33 @@ pipeline {
         // Step 9: Software Composition Analysis (SCA) with OWASP Dependency-Check
         stage('SCA - OWASP Dependency-Check') {
             steps {
-                sh '''
-                  docker run --rm -v "${HOST_WORKSPACE}:/src" owasp/dependency-check:latest \
-                    --scan /src \
-                    --project ${APP_NAME} \
-                    --format JSON \
-                    --format HTML \
-                    --out /src/${SCA_DIR}
-                '''
+                script {
+                    try {
+                        withCredentials([string(credentialsId: 'ben', variable: 'NVD_API_KEY')]) {
+                            sh '''
+                              docker run --rm -v "${HOST_WORKSPACE}:/src" \
+                                -e NVD_API_KEY="${NVD_API_KEY}" \
+                                owasp/dependency-check:latest \
+                                --scan /src \
+                                --project "${APP_NAME}" \
+                                --format JSON \
+                                --format HTML \
+                                --out "/src/${SCA_DIR}" \
+                                --nvdApiKey "${NVD_API_KEY}"
+                            '''
+                        }
+                    } catch (Exception e) {
+                        echo "Warning: NVD API Key 'ben' not found or failed. Running without API key (may be subject to rate limits)."
+                        sh '''
+                          docker run --rm -v "${HOST_WORKSPACE}:/src" owasp/dependency-check:latest \
+                            --scan /src \
+                            --project "${APP_NAME}" \
+                            --format JSON \
+                            --format HTML \
+                            --out "/src/${SCA_DIR}"
+                        '''
+                    }
+                }
             }
         }
 
