@@ -2,30 +2,30 @@
 # Copy this file to terraform.tfvars and update with your values
 
 # AWS Configuration
-aws_region = "eu-central-1"  # Change to your preferred region
+aws_region = "eu-central-1" # Change to your preferred region
 
 # Project Configuration
 project_name = "cicd-pipeline"
-environment = "dev"
+environment  = "dev"
 
 # Network Configuration
-vpc_cidr = "10.0.0.0/16"
-public_subnets = ["10.0.1.0/24", "10.0.2.0/24"]
+vpc_cidr        = "10.0.0.0/16"
+public_subnets  = ["10.0.1.0/24", "10.0.2.0/24"]
 private_subnets = ["10.0.10.0/24", "10.0.20.0/24"]
 
 # Security Configuration
 # IMPORTANT: Replace with your actual IP address for security
 # Get your IP: curl ifconfig.me
-allowed_ips = ["196.61.44.164/32"]  # SSH and Jenkins access
-app_allowed_ips = ["196.61.44.164/32"]  # Application port 5000 access
+allowed_ips     = ["196.61.44.164/32"] # SSH and Jenkins access
+app_allowed_ips = ["196.61.44.164/32"] # Application port 5000 access
 
 # EC2 Configuration
-# IMPORTANT: This must be an existing key pair in your AWS account
-key_name = "cicd-pipeline-dev-keypair1"  # Created via AWS CLI or Console
+# Terraform will generate this key pair locally in the terraform folder and create it in AWS
+key_name = "cicd-pipeline-dev-keypair2"
 
 # Instance Types (adjust based on your needs and budget)
-jenkins_instance_type = "t3.micro"  # Recommended for Jenkins
-app_instance_type = "t3.micro"       # Sufficient for demo app
+jenkins_instance_type = "t3.micro" # Recommended for Jenkins
+app_instance_type     = "t3.micro" # Sufficient for demo app
 
 # Jenkins Configuration
 # IMPORTANT: Use a strong password

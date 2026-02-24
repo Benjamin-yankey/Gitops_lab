@@ -86,11 +86,11 @@ variable "jenkins_admin_password" {
 }
 
 variable "key_name" {
-  description = "Name of existing EC2 key pair in AWS. Do not generate keys via Terraform."
+  description = "Name for EC2 key pair that Terraform will generate locally and create in AWS."
   type        = string
 
   validation {
     condition     = length(var.key_name) > 0
-    error_message = "key_name must be set to an existing EC2 key pair name in your AWS account."
+    error_message = "key_name must be set (Terraform will create this key pair name in AWS)."
   }
 }

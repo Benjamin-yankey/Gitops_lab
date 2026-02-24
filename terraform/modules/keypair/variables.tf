@@ -9,6 +9,6 @@ variable "environment" {
 }
 
 variable "key_name" {
-  description = "Name of existing EC2 key pair"
+  description = "Name for the EC2 key pair to create"
   type        = string
 }

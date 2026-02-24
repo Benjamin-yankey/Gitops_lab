@@ -26,12 +26,12 @@ output "app_url" {
 
 output "ssh_jenkins" {
   description = "SSH command for Jenkins server"
-  value       = "ssh -i /path/to/${var.key_name}.pem ec2-user@${module.jenkins.public_ip}"
+  value       = "ssh -i ${module.keypair.private_key_path} ec2-user@${module.jenkins.public_ip}"
 }
 
 output "ssh_app_server" {
   description = "SSH command for application server"
-  value       = "ssh -i /path/to/${var.key_name}.pem ec2-user@${module.app_server.public_ip}"
+  value       = "ssh -i ${module.keypair.private_key_path} ec2-user@${module.app_server.public_ip}"
 }
 
 output "jenkins_password_secret_name" {
@@ -43,4 +43,14 @@ output "jenkins_password_secret_arn" {
   description = "AWS Secrets Manager secret ARN for Jenkins admin password"
   value       = module.secrets.secret_arn
   sensitive   = true
+}
+
+output "ssh_keypair_secret_name" {
+  description = "AWS Secrets Manager secret name for generated SSH key pair"
+  value       = module.secrets.ssh_keypair_secret_name
+}
+
+output "ssh_private_key_local_path" {
+  description = "Local path to generated private key file"
+  value       = module.keypair.private_key_path
 }

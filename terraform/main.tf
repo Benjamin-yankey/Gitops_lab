@@ -50,7 +50,7 @@ module "vpc" {
   private_subnets    = var.private_subnets
 }
 
-# EC2 Authentication: Configure existing SSH key pair
+# EC2 Authentication: Generate SSH key pair locally and register in AWS
 module "keypair" {
   source = "./modules/keypair"
 
@@ -75,13 +75,13 @@ module "security_groups" {
 module "vpc_endpoints" {
   source = "./modules/vpc-endpoints"
 
-  project_name      = var.project_name
-  environment       = var.environment
-  vpc_id            = module.vpc.vpc_id
-  vpc_cidr          = var.vpc_cidr
-  aws_region        = var.aws_region
-  subnet_ids        = module.vpc.public_subnets
-  route_table_ids   = module.vpc.public_route_table_ids
+  project_name    = var.project_name
+  environment     = var.environment
+  vpc_id          = module.vpc.vpc_id
+  vpc_cidr        = var.vpc_cidr
+  aws_region      = var.aws_region
+  subnet_ids      = module.vpc.public_subnets
+  route_table_ids = module.vpc.public_route_table_ids
 }
 
 # Identity Layer: Create IAM roles and instance profiles for EC2
@@ -100,6 +100,9 @@ module "secrets" {
   project_name           = var.project_name
   environment            = var.environment
   jenkins_admin_password = var.jenkins_admin_password
+  ssh_key_name           = module.keypair.key_name
+  ssh_private_key_pem    = module.keypair.private_key_pem
+  ssh_public_key_openssh = module.keypair.public_key_openssh
 }
 
 # CI/CD Server: Provision Jenkins on EC2

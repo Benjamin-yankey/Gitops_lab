@@ -25,4 +25,5 @@ app_instance_type     = "t3.micro"
 jenkins_admin_password = "CHANGE_ME_TO_STRONG_PASSWORD"
 
 # Key Pair Configuration
+# Terraform creates this key pair locally and in AWS
 key_name = "cicd-pipeline-dev-keypair"

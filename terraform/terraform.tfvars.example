@@ -19,8 +19,8 @@ private_subnets = ["10.0.10.0/24", "10.0.20.0/24"]
 allowed_ips = ["YOUR_IP_ADDRESS/32"]  # Example: ["203.0.113.1/32"]
 
 # EC2 Configuration
-# IMPORTANT: This must be an existing key pair in your AWS account
-key_name = "your-existing-key-pair-name"  # Example: "my-aws-key"
+# Terraform will generate this key pair locally in the terraform folder and create it in AWS
+key_name = "your-new-key-pair-name"  # Example: "cicd-pipeline-dev-keypair"
 
 # Instance Types (adjust based on your needs and budget)
 jenkins_instance_type = "t3.medium"  # Recommended for Jenkins
