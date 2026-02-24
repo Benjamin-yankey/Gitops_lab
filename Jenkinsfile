@@ -158,24 +158,55 @@ pipeline {
 
         // Step 9: Software Composition Analysis (SCA) with OWASP Dependency-Check
         stage('SCA - OWASP Dependency-Check') {
-            environment {
-                // This ensures the credential is available and masked in the logs
-                NVD_API_KEY = credentials('ben')
-            }
             steps {
                 script {
-                    echo "NVD API Key loaded. Starting OWASP Dependency-Check..."
-                    sh """
-                      docker run --rm -v "${env.HOST_WORKSPACE}:/src" \
-                        -e NVD_API_KEY="${env.NVD_API_KEY}" \
-                        owasp/dependency-check:latest \
-                        --scan /src \
-                        --project "${env.APP_NAME}" \
-                        --format JSON \
-                        --format HTML \
-                        --out "/src/${env.SCA_DIR}" \
-                        --nvdApiKey "${env.NVD_API_KEY}"
-                    """
+                    echo "Checking for NVD API Key 'ben'..."
+                    // Try to get the key as a Secret Text (standard)
+                    try {
+                        withCredentials([string(credentialsId: 'ben', variable: 'NVD_KEY')]) {
+                            echo "NVD API Key found (Secret Text). Starting accelerated scan..."
+                            sh """
+                              docker run --rm -v \"${env.HOST_WORKSPACE}:/src\" \
+                                -e NVD_API_KEY=\"\$NVD_KEY\" \
+                                owasp/dependency-check:latest \
+                                --scan /src \
+                                --project \"${env.APP_NAME}\" \
+                                --format JSON \
+                                --format HTML \
+                                --out \"/src/${env.SCA_DIR}\" \
+                                --nvdApiKey \"\$NVD_KEY\"
+                            """
+                        }
+                    } catch (Exception e) {
+                        // Fallback to Username/Password if not found as Secret Text
+                        try {
+                            withCredentials([usernamePassword(credentialsId: 'ben', usernameVariable: 'U', passwordVariable: 'P')]) {
+                                echo "NVD API Key found (Password Type). Starting accelerated scan..."
+                                sh """
+                                  docker run --rm -v \"${env.HOST_WORKSPACE}:/src\" \
+                                    -e NVD_API_KEY=\"\$P\" \
+                                    owasp/dependency-check:latest \
+                                    --scan /src \
+                                    --project \"${env.APP_NAME}\" \
+                                    --format JSON \
+                                    --format HTML \
+                                    --out \"/src/${env.SCA_DIR}\" \
+                                    --nvdApiKey \"\$P\"
+                                """
+                            }
+                        } catch (Exception e2) {
+                            echo "Warning: NVD Key 'ben' not found. This update will be VERY slow."
+                            sh """
+                              docker run --rm -v \"${env.HOST_WORKSPACE}:/src\" \
+                                owasp/dependency-check:latest \
+                                --scan /src \
+                                --project \"${env.APP_NAME}\" \
+                                --format JSON \
+                                --format HTML \
+                                --out \"/src/${env.SCA_DIR}\"
+                            """
+                        }
+                    }
                 }
             }
         }
