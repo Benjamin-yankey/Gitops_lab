@@ -321,19 +321,17 @@ pipeline {
     // Post-pipeline execution cleanup and notification
     post {
         always {
-            node {
-                // Archive build artifacts and scan reports for audit and debugging
-                archiveArtifacts allowEmptyArchive: true, artifacts: 'reports/**/*, ecs/*.json, sonar-project.properties'
-                // Clean up local Docker images to save disk space on the build agent
-                script {
-                    if (env.IMAGE_URI != "pending") {
-                        sh '''
-                          docker image rm ${APP_NAME}:${BUILD_TAG_VERSION} 2>/dev/null || true
-                          docker image rm ${IMAGE_URI} 2>/dev/null || true
-                          docker image rm ${ECR_URI}:latest 2>/dev/null || true
-                          docker image rm ${ECR_URI}:sha-${SHORT_SHA} 2>/dev/null || true
-                        '''
-                    }
+            // Archive build artifacts and scan reports for audit and debugging
+            archiveArtifacts allowEmptyArchive: true, artifacts: 'reports/**/*, ecs/*.json, sonar-project.properties'
+            // Clean up local Docker images to save disk space on the build agent
+            script {
+                if (env.IMAGE_URI != "pending") {
+                    sh '''
+                      docker image rm ${APP_NAME}:${BUILD_TAG_VERSION} 2>/dev/null || true
+                      docker image rm ${IMAGE_URI} 2>/dev/null || true
+                      docker image rm ${ECR_URI}:latest 2>/dev/null || true
+                      docker image rm ${ECR_URI}:sha-${SHORT_SHA} 2>/dev/null || true
+                    '''
                 }
             }
         }
