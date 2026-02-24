@@ -36,6 +36,11 @@ pipeline {
         SECRET_DIR = 'reports/secret'
         SBOM_DIR = 'reports/sbom'
         DEPLOY_DIR = 'reports/deploy'
+        // Initialize these with defaults to allow post-cleanup even if early stages fail
+        BUILD_TAG_VERSION = "build-${env.BUILD_NUMBER}-init"
+        IMAGE_URI = "pending"
+        ECR_URI = "pending"
+        SHORT_SHA = "init"
     }
 
     stages {
@@ -316,15 +321,21 @@ pipeline {
     // Post-pipeline execution cleanup and notification
     post {
         always {
-            // Archive build artifacts and scan reports for audit and debugging
-            archiveArtifacts allowEmptyArchive: true, artifacts: 'reports/**/*, ecs/*.json, sonar-project.properties'
-            // Clean up local Docker images to save disk space on the build agent
-            sh '''
-              docker image rm ${APP_NAME}:${BUILD_TAG_VERSION} 2>/dev/null || true
-              docker image rm ${IMAGE_URI} 2>/dev/null || true
-              docker image rm ${ECR_URI}:latest 2>/dev/null || true
-              docker image rm ${ECR_URI}:sha-${SHORT_SHA} 2>/dev/null || true
-            '''
+            node {
+                // Archive build artifacts and scan reports for audit and debugging
+                archiveArtifacts allowEmptyArchive: true, artifacts: 'reports/**/*, ecs/*.json, sonar-project.properties'
+                // Clean up local Docker images to save disk space on the build agent
+                script {
+                    if (env.IMAGE_URI != "pending") {
+                        sh '''
+                          docker image rm ${APP_NAME}:${BUILD_TAG_VERSION} 2>/dev/null || true
+                          docker image rm ${IMAGE_URI} 2>/dev/null || true
+                          docker image rm ${ECR_URI}:latest 2>/dev/null || true
+                          docker image rm ${ECR_URI}:sha-${SHORT_SHA} 2>/dev/null || true
+                        '''
+                    }
+                }
+            }
         }
         success {
             echo 'Secure CI/CD pipeline completed and ECS service updated.'
