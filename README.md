@@ -135,6 +135,73 @@ npm start
 curl http://localhost:5000/health
 ```
 
+## Quick Start (If You Are Confused)
+
+Use this section first if you want a simple "what do I run?" guide.
+
+### What this project does
+
+- It is a Node.js app (`app.js`) plus a Jenkins CI/CD pipeline (`Jenkinsfile`).
+- **Local run**: run and test the app on your machine.
+- **Pipeline run**: Jenkins runs tests and security scans, then deploys to ECS only if security gates pass.
+
+### Run the app locally (step-by-step)
+
+From repo root:
+
+```bash
+npm ci
+npm test
+npm start
+```
+
+Open a second terminal and verify:
+
+```bash
+curl http://localhost:5000/health
+curl http://localhost:5000/api/info
+```
+
+If both commands return valid JSON/OK output, your app is running correctly.
+
+### Same flow with Makefile
+
+```bash
+make install
+make test
+make run
+```
+
+### How Jenkins pipeline works (simple model)
+
+When you push changes and trigger Jenkins:
+
+1. Installs dependencies and runs tests.
+2. Runs security checks (SAST, SCA, secret scan, image scan, SBOM).
+3. Runs policy gate (`scripts/security-gate.js`).
+4. If gate passes: pushes image to ECR and deploys to ECS.
+5. Archives reports in `reports/`.
+
+### Why vulnerable dependency scripts exist
+
+These scripts are for demonstrating the security gate behavior:
+
+```bash
+# should make pipeline fail at security gate
+scripts/inject-vulnerable-dependency.sh
+
+# should allow pipeline to pass again after fix
+scripts/remove-vulnerable-dependency.sh
+```
+
+### Suggested first learning flow
+
+1. Run locally (`npm ci`, `npm test`, `npm start`).
+2. Verify endpoints with `curl`.
+3. Make a small change and commit.
+4. Push and trigger Jenkins build.
+5. Check whether build fails at security gate or passes to deployment.
+
 ## Command Reference
 
 ### 1. Setup
