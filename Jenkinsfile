@@ -158,30 +158,24 @@ pipeline {
 
         // Step 9: Software Composition Analysis (SCA) with OWASP Dependency-Check
         stage('SCA - OWASP Dependency-Check') {
+            environment {
+                // This ensures the credential is available and masked in the logs
+                NVD_API_KEY = credentials('ben')
+            }
             steps {
                 script {
-                    // Define the base scanner command
-                    def scannerCmd = "docker run --rm -v \"${env.HOST_WORKSPACE}:/src\" owasp/dependency-check:latest --scan /src --project \"${env.APP_NAME}\" --format JSON --format HTML --out \"/src/${env.SCA_DIR}\""
-                    
-                    try {
-                        // Attempt to use 'ben' as a Secret Text credential
-                        withCredentials([string(credentialsId: 'ben', variable: 'NVD_KEY')]) {
-                            echo "Applying NVD API Key from Secret Text 'ben'..."
-                            sh "${scannerCmd} --nvdApiKey \"\$NVD_KEY\""
-                        }
-                    } catch (Exception e1) {
-                        try {
-                            // Fallback: Attempt to use 'ben' as a Username/Password credential (using password as the key)
-                            withCredentials([usernamePassword(credentialsId: 'ben', usernameVariable: 'U', passwordVariable: 'P')]) {
-                                echo "Applying NVD API Key from Password credential 'ben'..."
-                                sh "${scannerCmd} --nvdApiKey \"\$P\""
-                            }
-                        } catch (Exception e2) {
-                            // Final Fallback: Run without API key
-                            echo "Warning: NVD API Key 'ben' not found. Proceeding with scan (subject to rate limits)."
-                            sh scannerCmd
-                        }
-                    }
+                    echo "NVD API Key loaded. Starting OWASP Dependency-Check..."
+                    sh """
+                      docker run --rm -v "${env.HOST_WORKSPACE}:/src" \
+                        -e NVD_API_KEY="${env.NVD_API_KEY}" \
+                        owasp/dependency-check:latest \
+                        --scan /src \
+                        --project "${env.APP_NAME}" \
+                        --format JSON \
+                        --format HTML \
+                        --out "/src/${env.SCA_DIR}" \
+                        --nvdApiKey "${env.NVD_API_KEY}"
+                    """
                 }
             }
         }
