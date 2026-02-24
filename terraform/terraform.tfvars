@@ -21,7 +21,7 @@ app_allowed_ips = ["196.61.44.164/32"]  # Application port 5000 access
 
 # EC2 Configuration
 # IMPORTANT: This must be an existing key pair in your AWS account
-key_name = "cicd-pipeline-keypair"  # Created via AWS CLI or Console
+key_name = "cicd-pipeline-dev-keypair1"  # Created via AWS CLI or Console
 
 # Instance Types (adjust based on your needs and budget)
 jenkins_instance_type = "t3.micro"  # Recommended for Jenkins
