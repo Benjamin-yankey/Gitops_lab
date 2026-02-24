@@ -17,37 +17,30 @@ systemctl start docker
 systemctl enable docker
 usermod -a -G docker ec2-user
 
-echo "Installing Java..."
-amazon-linux-extras install java-openjdk11 -y
-java -version
-
-echo "Adding Jenkins repository..."
-wget -O /etc/yum.repos.d/jenkins.repo https://pkg.jenkins.io/redhat-stable/jenkins.repo
-rpm --import https://pkg.jenkins.io/redhat-stable/jenkins.io-2023.key
-
-echo "Installing Jenkins..."
-yum install -y jenkins
-usermod -a -G docker jenkins
-
-echo "Installing Node.js..."
-curl -fsSL https://rpm.nodesource.com/setup_18.x | bash -
-yum install -y nodejs
+echo "Installing additional tools..."
+yum install -y git
 
 echo "Retrieving Jenkins password from Secrets Manager..."
 JENKINS_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ${secret_name} --region ${aws_region} --query SecretString --output text)
 
-echo "Configuring Jenkins..."
-mkdir -p /var/lib/jenkins/init.groovy.d
-cat > /var/lib/jenkins/init.groovy.d/basic-security.groovy << GROOVYEOF
+echo "Preparing Jenkins Docker configuration..."
+systemctl disable --now jenkins || true
+
+mkdir -p /opt/jenkins_home /opt/jenkins_init
+chown -R 1000:1000 /opt/jenkins_home /opt/jenkins_init
+
+cat > /opt/jenkins_init/basic-security.groovy << 'GROOVYEOF'
 #!groovy
 import jenkins.model.*
 import hudson.security.*
 import jenkins.security.s2m.AdminWhitelistRule
 
 def instance = Jenkins.getInstance()
+def adminUser = System.getenv("JENKINS_ADMIN_ID") ?: "admin"
+def adminPassword = System.getenv("JENKINS_ADMIN_PASSWORD")
 
 def hudsonRealm = new HudsonPrivateSecurityRealm(false)
-hudsonRealm.createAccount("admin", "$JENKINS_PASSWORD")
+hudsonRealm.createAccount(adminUser, adminPassword)
 instance.setSecurityRealm(hudsonRealm)
 
 def strategy = new FullControlOnceLoggedInAuthorizationStrategy()
@@ -58,16 +51,30 @@ instance.save()
 Jenkins.instance.getInjector().getInstance(AdminWhitelistRule.class).setMasterKillSwitch(false)
 GROOVYEOF
 
-echo "Starting Jenkins service..."
-systemctl start jenkins
-systemctl enable jenkins
+echo "Starting Jenkins container..."
+docker rm -f jenkins || true
+docker pull jenkins/jenkins:lts-jdk17
+docker run -d \
+  --name jenkins \
+  --restart unless-stopped \
+  -p 8080:8080 \
+  -p 50000:50000 \
+  -e JENKINS_ADMIN_ID=admin \
+  -e JENKINS_ADMIN_PASSWORD="$${JENKINS_PASSWORD}" \
+  -v /opt/jenkins_home:/var/jenkins_home \
+  -v /opt/jenkins_init:/usr/share/jenkins/ref/init.groovy.d \
+  jenkins/jenkins:lts-jdk17
 
 echo "Waiting for Jenkins to start..."
-sleep 60
+for i in {1..30}; do
+  if curl -fsS http://localhost:8080/login >/dev/null 2>&1; then
+    echo "Jenkins is up."
+    break
+  fi
+  sleep 10
+done
 
-systemctl status jenkins
-
-echo "Installing additional tools..."
-yum install -y git
+docker ps --filter "name=jenkins"
+docker logs --tail 50 jenkins || true
 
 echo "Jenkins setup completed at $(date)!"

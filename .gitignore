@@ -25,3 +25,5 @@ reports/**/*.xml
 # OS/editor
 .DS_Store
 .vscode/
+cicd-pipeline-dev-keypair2.pem
+cicd-pipeline-dev-keypair2.pub
