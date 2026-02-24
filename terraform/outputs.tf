@@ -1,3 +1,4 @@
+# Output values to display after successful Terraform provisioning
 output "vpc_id" {
   description = "ID of the VPC"
   value       = module.vpc.vpc_id

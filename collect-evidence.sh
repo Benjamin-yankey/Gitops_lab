@@ -1,6 +1,5 @@
 #!/bin/bash
-
-# CI/CD Pipeline Evidence Collection Script
+# automated evidence collection script for CI/CD pipeline audit and submission
 # This script automates the collection of logs and evidence for project submission
 
 set -e

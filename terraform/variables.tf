@@ -1,3 +1,4 @@
+# Input variables for the CI/CD infrastructure Terraform configuration
 variable "aws_region" {
   description = "AWS region"
   type        = string

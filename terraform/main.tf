@@ -1,3 +1,4 @@
+# Terraform configuration for provisioning a secure CI/CD infrastructure on AWS
 terraform {
   required_version = ">= 1.0"
   required_providers {
@@ -8,6 +9,7 @@ terraform {
   }
 }
 
+# Configure the AWS Provider with region and default tags for all resources
 provider "aws" {
   region = var.aws_region
 
@@ -20,11 +22,12 @@ provider "aws" {
   }
 }
 
-# Data sources
+# Data sources to fetch available AWS infrastructure information
 data "aws_availability_zones" "available" {
   state = "available"
 }
 
+# Fetch the latest Amazon Linux 2 AMI
 data "aws_ami" "amazon_linux" {
   most_recent = true
   owners      = ["amazon"]
@@ -35,7 +38,7 @@ data "aws_ami" "amazon_linux" {
   }
 }
 
-# VPC Module
+# Networking layer: Create VPC, Subnets, and Route Tables
 module "vpc" {
   source = "./modules/vpc"
 
@@ -47,7 +50,7 @@ module "vpc" {
   private_subnets    = var.private_subnets
 }
 
-# Key Pair Module
+# EC2 Authentication: Configure existing SSH key pair
 module "keypair" {
   source = "./modules/keypair"
 
@@ -56,7 +59,7 @@ module "keypair" {
   key_name     = var.key_name
 }
 
-# Security Groups Module
+# Security Layer: Define firewall rules (Security Groups)
 module "security_groups" {
   source = "./modules/security"
 
@@ -68,7 +71,7 @@ module "security_groups" {
   app_allowed_ips = var.app_allowed_ips
 }
 
-# VPC Endpoints Module
+# Secure Connectivity: Configure VPC endpoints for private AWS service access
 module "vpc_endpoints" {
   source = "./modules/vpc-endpoints"
 
@@ -81,7 +84,7 @@ module "vpc_endpoints" {
   route_table_ids   = module.vpc.public_route_table_ids
 }
 
-# IAM Module
+# Identity Layer: Create IAM roles and instance profiles for EC2
 module "iam" {
   source = "./modules/iam"
 
@@ -90,7 +93,7 @@ module "iam" {
   secret_arn   = module.secrets.secret_arn
 }
 
-# Secrets Manager Module
+# Secret Management: Securely store sensitive credentials
 module "secrets" {
   source = "./modules/secrets"
 
@@ -99,7 +102,7 @@ module "secrets" {
   jenkins_admin_password = var.jenkins_admin_password
 }
 
-# Jenkins EC2 Module
+# CI/CD Server: Provision Jenkins on EC2
 module "jenkins" {
   source = "./modules/jenkins"
 
@@ -115,7 +118,7 @@ module "jenkins" {
   volume_size          = var.jenkins_volume_size
 }
 
-# Monitoring Module
+# Observability Layer: Configure CloudWatch dashboards and alarms
 module "monitoring" {
   source = "./modules/monitoring"
 
@@ -126,7 +129,7 @@ module "monitoring" {
   vpc_id              = module.vpc.vpc_id
 }
 
-# Application EC2 Module
+# Application Hosting: Provision the node-app server on EC2
 module "app_server" {
   source = "./modules/ec2"
 

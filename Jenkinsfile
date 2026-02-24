@@ -1,10 +1,13 @@
+// Jenkins Pipeline for a secure Node.js application deployment to AWS ECS
 pipeline {
     agent any
 
     options {
+        // Display timestamps in the console output
         timestamps()
     }
 
+    // Define configurable parameters for the pipeline
     parameters {
         string(name: 'AWS_REGION', defaultValue: 'eu-west-1', description: 'AWS region for ECR/ECS')
         string(name: 'AWS_ACCOUNT_ID', defaultValue: '', description: 'AWS account ID hosting ECR/ECS')
@@ -20,6 +23,7 @@ pipeline {
         string(name: 'KEEP_ECS_REVISIONS', defaultValue: '10', description: 'Number of ECS task definition revisions to keep active')
     }
 
+    // Define global environment variables used across stages
     environment {
         APP_NAME = 'cicd-node-app'
         REPORT_DIR = 'reports'
@@ -32,13 +36,16 @@ pipeline {
     }
 
     stages {
+        // Step 1: Clone source code from the repository
         stage('Checkout') {
             steps {
                 checkout scm
+                // Create report directories if they don't exist
                 sh 'mkdir -p ${SAST_DIR} ${SCA_DIR} ${IMAGE_DIR} ${SECRET_DIR} ${SBOM_DIR} ${DEPLOY_DIR}'
             }
         }
 
+        // Step 2: Ensure required AWS parameters are provided
         stage('Validate Required Inputs') {
             steps {
                 script {
@@ -56,9 +63,11 @@ pipeline {
             }
         }
 
+        // Step 3: Generate build versioning metadata
         stage('Build Metadata') {
             steps {
                 script {
+                    // Extract short Git SHA for unique image tagging
                     env.SHORT_SHA = sh(script: 'git rev-parse --short=8 HEAD || echo localdev', returnStdout: true).trim()
                     env.BUILD_TAG_VERSION = "build-${env.BUILD_NUMBER}-${env.SHORT_SHA}"
                     env.ECR_URI = "${params.AWS_ACCOUNT_ID}.dkr.ecr.${params.AWS_REGION}.amazonaws.com/${params.ECR_REPOSITORY}"
@@ -67,12 +76,14 @@ pipeline {
             }
         }
 
+        // Step 4: Install application dependencies
         stage('Install') {
             steps {
                 sh 'npm ci'
             }
         }
 
+        // Step 5: Execute unit tests and collect coverage reports
         stage('Unit Tests') {
             steps {
                 sh 'npm test -- --coverage'
@@ -85,6 +96,7 @@ pipeline {
             }
         }
 
+        // Step 6: Static Application Security Testing (SAST) with SonarQube
         stage('SAST - SonarQube') {
             steps {
                 withSonarQubeEnv('sonarqube') {
@@ -97,6 +109,7 @@ pipeline {
             }
         }
 
+        // Step 7: Wait for SonarQube quality gate analysis
         stage('SAST Quality Gate') {
             steps {
                 timeout(time: 10, unit: 'MINUTES') {
@@ -105,6 +118,7 @@ pipeline {
             }
         }
 
+        // Step 8: Scan for accidentally committed secrets using Gitleaks
         stage('Secret Scan - Gitleaks') {
             steps {
                 sh '''
@@ -117,6 +131,7 @@ pipeline {
             }
         }
 
+        // Step 9: Software Composition Analysis (SCA) with OWASP Dependency-Check
         stage('SCA - OWASP Dependency-Check') {
             steps {
                 sh '''
@@ -130,6 +145,7 @@ pipeline {
             }
         }
 
+        // Step 10: Generate Software Bill of Materials (SBOM) with Syft
         stage('SBOM - Syft') {
             steps {
                 sh '''
@@ -139,6 +155,7 @@ pipeline {
             }
         }
 
+        // Step 11: Build the production Docker container image
         stage('Build Container') {
             steps {
                 sh '''
@@ -149,6 +166,7 @@ pipeline {
             }
         }
 
+        // Step 12: Scan the Docker image for OS and package vulnerabilities using Trivy
         stage('Image Scan - Trivy') {
             steps {
                 sh '''
@@ -161,12 +179,14 @@ pipeline {
             }
         }
 
+        // Step 13: Enforce the overall security quality gate
         stage('Security Gate') {
             steps {
                 sh 'node scripts/security-gate.js'
             }
         }
 
+        // Step 14: Log in to AWS ECR and push the scanned container image
         stage('ECR Login and Push') {
             steps {
                 sh '''
@@ -189,6 +209,7 @@ pipeline {
             }
         }
 
+        // Step 15: Configure ECR lifecycle policy to manage old images automatically
         stage('Apply ECR Lifecycle') {
             when {
                 expression { return params.APPLY_ECR_LIFECYCLE_POLICY }
@@ -203,6 +224,7 @@ pipeline {
             }
         }
 
+        // Step 16: Render the ECS task definition with the new image URI and configuration
         stage('Render ECS Task Definition') {
             steps {
                 sh '''
@@ -218,6 +240,7 @@ pipeline {
             }
         }
 
+        // Step 17: Register the new task definition version in AWS ECS
         stage('Register ECS Task Definition') {
             steps {
                 sh '''
@@ -230,6 +253,7 @@ pipeline {
             }
         }
 
+        // Step 18: Trigger a rolling deployment update to the ECS service
         stage('Deploy to ECS Service') {
             when {
                 expression { return params.DEPLOYMENT_STRATEGY == 'rolling' }
@@ -258,6 +282,7 @@ pipeline {
             }
         }
 
+        // Step 19: Clean up old task definitions to avoid exceeding AWS limits
         stage('Cleanup Old ECS Revisions') {
             steps {
                 sh 'scripts/cleanup-ecs-revisions.sh ${ECS_TASK_FAMILY} ${KEEP_ECS_REVISIONS}'
@@ -265,9 +290,12 @@ pipeline {
         }
     }
 
+    // Post-pipeline execution cleanup and notification
     post {
         always {
+            // Archive build artifacts and scan reports for audit and debugging
             archiveArtifacts allowEmptyArchive: true, artifacts: 'reports/**/*, ecs/*.json, sonar-project.properties'
+            // Clean up local Docker images to save disk space on the build agent
             sh '''
               docker image rm ${APP_NAME}:${BUILD_TAG_VERSION} 2>/dev/null || true
               docker image rm ${IMAGE_URI} 2>/dev/null || true

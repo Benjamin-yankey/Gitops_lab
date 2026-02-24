@@ -1,13 +1,21 @@
+// Node.js script to evaluate security scan results and enforce a quality gate
 const fs = require('fs');
 
+// Define default paths for security reports
 const files = {
   sca: process.env.SCA_REPORT || 'reports/sca/dependency-check-report.json',
   image: process.env.IMAGE_REPORT || 'reports/image/trivy-image.json',
   secret: process.env.SECRET_REPORT || 'reports/secret/gitleaks-report.json'
 };
 
+// Define severity levels that will cause the gate to fail
 const sevOrder = ['CRITICAL', 'HIGH'];
 
+/**
+ * Safely reads and parses a JSON file
+ * @param {string} path - File path to read
+ * @returns {object} - Parsed JSON object
+ */
 function safeReadJson(path) {
   if (!fs.existsSync(path)) {
     throw new Error(`Required report not found: ${path}`);
@@ -15,6 +23,11 @@ function safeReadJson(path) {
   return JSON.parse(fs.readFileSync(path, 'utf8'));
 }
 
+/**
+ * Counts vulnerabilities from OWASP Dependency-Check report
+ * @param {object} report - Parsed SCA report
+ * @returns {object} - Counts of CRITICAL and HIGH vulnerabilities
+ */
 function countDependencyCheck(report) {
   const counts = { CRITICAL: 0, HIGH: 0 };
   const dependencies = report.dependencies || [];
@@ -27,6 +40,11 @@ function countDependencyCheck(report) {
   return counts;
 }
 
+/**
+ * Counts vulnerabilities from Trivy image scan report
+ * @param {object} report - Parsed image scan report
+ * @returns {object} - Counts of CRITICAL and HIGH vulnerabilities
+ */
 function countTrivy(report) {
   const counts = { CRITICAL: 0, HIGH: 0 };
   for (const result of report.Results || []) {
@@ -38,10 +56,21 @@ function countTrivy(report) {
   return counts;
 }
 
+/**
+ * Counts secrets found by Gitleaks
+ * @param {array} report - Parsed secret report
+ * @returns {number} - Number of detected secrets
+ */
 function countGitleaks(report) {
   return Array.isArray(report) ? report.length : 0;
 }
 
+/**
+ * Merges two vulnerability count objects
+ * @param {object} a - First count object
+ * @param {object} b - Second count object
+ * @returns {object} - Combined counts
+ */
 function mergeCounts(a, b) {
   return {
     CRITICAL: (a.CRITICAL || 0) + (b.CRITICAL || 0),
@@ -49,20 +78,25 @@ function mergeCounts(a, b) {
   };
 }
 
+// Main execution block
 try {
+  // Load scan reports
   const sca = safeReadJson(files.sca);
   const image = safeReadJson(files.image);
   const secret = safeReadJson(files.secret);
 
+  // Process vulnerability data
   const scaCounts = countDependencyCheck(sca);
   const imageCounts = countTrivy(image);
   const total = mergeCounts(scaCounts, imageCounts);
   const secretCount = countGitleaks(secret);
 
+  // Log findings to console
   console.log(`SCA vulnerabilities: critical=${scaCounts.CRITICAL}, high=${scaCounts.HIGH}`);
   console.log(`Image vulnerabilities: critical=${imageCounts.CRITICAL}, high=${imageCounts.HIGH}`);
   console.log(`Secrets detected: ${secretCount}`);
 
+  // Determine if deployment should be blocked
   const hasBlockedVulns = sevOrder.some((sev) => total[sev] > 0);
   const hasSecrets = secretCount > 0;
 
@@ -73,6 +107,7 @@ try {
 
   console.log('Security gate passed. No Critical/High vulnerabilities and no secrets detected.');
 } catch (err) {
+  // Handle file reading or parsing errors
   console.error(`Security gate execution error: ${err.message}`);
   process.exit(2);
 }
