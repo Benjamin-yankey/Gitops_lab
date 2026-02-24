@@ -9,7 +9,7 @@ pipeline {
 
     // Define configurable parameters for the pipeline
     parameters {
-        string(name: 'AWS_REGION', defaultValue: 'eu-west-1', description: 'AWS region for ECR/ECS')
+        string(name: 'AWS_REGION', defaultValue: 'eu-central-1', description: 'AWS region for ECR/ECS')
         string(name: 'AWS_ACCOUNT_ID', defaultValue: '', description: 'AWS account ID hosting ECR/ECS')
         string(name: 'ECR_REPOSITORY', defaultValue: 'cicd-node-app', description: 'ECR repository name')
         string(name: 'ECS_CLUSTER', defaultValue: 'cicd-node-cluster', description: 'ECS cluster name')

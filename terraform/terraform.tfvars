@@ -2,7 +2,7 @@
 # Copy this file to terraform.tfvars and update with your values
 
 # AWS Configuration
-aws_region = "eu-west-1"  # Change to your preferred region
+aws_region = "eu-central-1"  # Change to your preferred region
 
 # Project Configuration
 project_name = "cicd-pipeline"
