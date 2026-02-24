@@ -33,7 +33,10 @@ resource "aws_cloudwatch_metric_alarm" "jenkins_cpu" {
   alarm_description = "Alert when Jenkins CPU exceeds 80%"
 }
 
+# Only create the EC2 app CPU alarm if the legacy app server is in use
 resource "aws_cloudwatch_metric_alarm" "app_cpu" {
+  count = var.enable_ec2_app_alarm ? 1 : 0
+
   alarm_name          = "${var.project_name}-${var.environment}-app-high-cpu"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 2

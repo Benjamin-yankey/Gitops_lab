@@ -27,3 +27,24 @@ reports/**/*.xml
 .vscode/
 cicd-pipeline-dev-keypair2.pem
 cicd-pipeline-dev-keypair2.pub
+terraform/.terraform.lock.hcl
+terraform/.terraform
+
+terraform.tfstate
+terraform.tfvars
+terraform.tfvars.example
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraform.lock.hcl
+
+# Terraform variable files (sensitive)
+terraform.tfvars
+*.auto.tfvars

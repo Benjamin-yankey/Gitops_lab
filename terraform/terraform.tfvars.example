@@ -1,36 +1,64 @@
+# ═══════════════════════════════════════════════════════════════
 # Terraform Variables Configuration
 # Copy this file to terraform.tfvars and update with your values
+# ═══════════════════════════════════════════════════════════════
 
+# ─────────────────────────────────────────────────────────────
 # AWS Configuration
+# ─────────────────────────────────────────────────────────────
 aws_region = "eu-central-1"  # Change to your preferred region
 
+# ─────────────────────────────────────────────────────────────
 # Project Configuration
+# ─────────────────────────────────────────────────────────────
 project_name = "cicd-pipeline"
-environment = "dev"
+environment  = "dev"
 
+# ─────────────────────────────────────────────────────────────
 # Network Configuration
-vpc_cidr = "10.0.0.0/16"
-public_subnets = ["10.0.1.0/24", "10.0.2.0/24"]
+# ─────────────────────────────────────────────────────────────
+vpc_cidr        = "10.0.0.0/16"
+public_subnets  = ["10.0.1.0/24", "10.0.2.0/24"]
 private_subnets = ["10.0.10.0/24", "10.0.20.0/24"]
 
+# ─────────────────────────────────────────────────────────────
 # Security Configuration
 # IMPORTANT: Replace with your actual IP address for security
 # Get your IP: curl ifconfig.me
-allowed_ips = ["YOUR_IP_ADDRESS/32"]  # Example: ["203.0.113.1/32"]
+# ─────────────────────────────────────────────────────────────
+allowed_ips     = ["YOUR_IP/32"]     # SSH and Jenkins access
+app_allowed_ips = ["YOUR_IP/32"]     # Application port 5000 access (also applies to ECS)
 
+# ─────────────────────────────────────────────────────────────
 # EC2 Configuration
-# Terraform will generate this key pair locally in the terraform folder and create it in AWS
-key_name = "your-new-key-pair-name"  # Example: "cicd-pipeline-dev-keypair"
+# ─────────────────────────────────────────────────────────────
+key_name              = "cicd-pipeline-dev-keypair"
+jenkins_instance_type = "t3.micro"
+app_instance_type     = "t3.micro"
+jenkins_volume_size   = 20
+app_volume_size       = 20
 
-# Instance Types (adjust based on your needs and budget)
-jenkins_instance_type = "t3.medium"  # Recommended for Jenkins
-app_instance_type = "t3.small"       # Sufficient for demo app
-
+# ─────────────────────────────────────────────────────────────
 # Jenkins Configuration
 # IMPORTANT: Use a strong password
+# ─────────────────────────────────────────────────────────────
 jenkins_admin_password = "YourSecurePassword123!"
 
-# Optional: Uncomment and modify if needed
-# vpc_cidr = "172.16.0.0/16"  # Alternative VPC CIDR
-# jenkins_instance_type = "t3.large"  # For heavy Jenkins usage
-# app_instance_type = "t3.medium"     # For production workloads
+# ─────────────────────────────────────────────────────────────
+# ECR Configuration (Container Registry)
+# ─────────────────────────────────────────────────────────────
+ecr_repository_name = "cicd-node-app"   # ECR repo name (matches Jenkinsfile default)
+ecr_max_image_count = 20                # Keep last 20 tagged images
+
+# ─────────────────────────────────────────────────────────────
+# ECS Configuration (Container Orchestration)
+# These defaults match what the Jenkinsfile expects!
+# ─────────────────────────────────────────────────────────────
+ecs_cluster_name       = "cicd-node-cluster"   # ECS cluster name
+ecs_service_name       = "cicd-node-service"   # ECS service name
+ecs_task_family        = "cicd-node-app"        # Task definition family
+ecs_task_cpu           = "256"                  # 0.25 vCPU (cheapest Fargate option)
+ecs_task_memory        = "512"                  # 512 MiB
+ecs_desired_count      = 1                      # Number of running containers
+ecs_log_group_name     = "/ecs/cicd-node-app"   # CloudWatch log group
+ecs_log_retention_days = 30                     # Delete logs after 30 days

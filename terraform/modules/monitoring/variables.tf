@@ -9,16 +9,23 @@ variable "environment" {
 }
 
 variable "jenkins_instance_id" {
-  description = "Jenkins instance ID"
+  description = "Jenkins EC2 instance ID"
   type        = string
 }
 
 variable "app_instance_id" {
-  description = "App server instance ID"
+  description = "App server EC2 instance ID (legacy, may be empty string if using ECS)"
   type        = string
+  default     = ""
 }
 
 variable "vpc_id" {
   description = "VPC ID"
   type        = string
+}
+
+variable "enable_ec2_app_alarm" {
+  description = "Whether to create the EC2 app CPU alarm (disable when using ECS)"
+  type        = bool
+  default     = true
 }
