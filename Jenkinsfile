@@ -79,14 +79,20 @@ pipeline {
         // Step 4: Install application dependencies
         stage('Install') {
             steps {
-                sh 'npm ci'
+                sh '''
+                  docker run --rm -v "$PWD:/work" -w /work node:20-alpine \
+                    sh -lc "npm ci"
+                '''
             }
         }
 
         // Step 5: Execute unit tests and collect coverage reports
         stage('Unit Tests') {
             steps {
-                sh 'npm test -- --coverage'
+                sh '''
+                  docker run --rm -v "$PWD:/work" -w /work node:20-alpine \
+                    sh -lc "npm test -- --coverage"
+                '''
             }
             post {
                 always {
@@ -182,7 +188,10 @@ pipeline {
         // Step 13: Enforce the overall security quality gate
         stage('Security Gate') {
             steps {
-                sh 'node scripts/security-gate.js'
+                sh '''
+                  docker run --rm -v "$PWD:/work" -w /work node:20-alpine \
+                    sh -lc "node scripts/security-gate.js"
+                '''
             }
         }
 
