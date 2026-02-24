@@ -72,6 +72,10 @@ pipeline {
                     env.BUILD_TAG_VERSION = "build-${env.BUILD_NUMBER}-${env.SHORT_SHA}"
                     env.ECR_URI = "${params.AWS_ACCOUNT_ID}.dkr.ecr.${params.AWS_REGION}.amazonaws.com/${params.ECR_REPOSITORY}"
                     env.IMAGE_URI = "${env.ECR_URI}:${env.BUILD_TAG_VERSION}"
+                    // Docker CLI talks to host daemon; convert Jenkins-in-container workspace path to host path.
+                    env.HOST_WORKSPACE = env.WORKSPACE.startsWith('/var/jenkins_home/') ?
+                        env.WORKSPACE.replaceFirst('^/var/jenkins_home/', '/opt/jenkins_home/') :
+                        env.WORKSPACE
                 }
             }
         }
@@ -80,7 +84,7 @@ pipeline {
         stage('Install') {
             steps {
                 sh '''
-                  docker run --rm -v "$PWD:/work" -w /work node:20-alpine \
+                  docker run --rm -v "${HOST_WORKSPACE}:/work" -w /work node:20-alpine \
                     sh -lc "npm ci"
                 '''
             }
@@ -90,7 +94,7 @@ pipeline {
         stage('Unit Tests') {
             steps {
                 sh '''
-                  docker run --rm -v "$PWD:/work" -w /work node:20-alpine \
+                  docker run --rm -v "${HOST_WORKSPACE}:/work" -w /work node:20-alpine \
                     sh -lc "npm test -- --coverage"
                 '''
             }
@@ -128,7 +132,7 @@ pipeline {
         stage('Secret Scan - Gitleaks') {
             steps {
                 sh '''
-                  docker run --rm -v "$PWD:/repo" gitleaks/gitleaks:latest detect \
+                  docker run --rm -v "${HOST_WORKSPACE}:/repo" gitleaks/gitleaks:latest detect \
                     --source /repo \
                     --report-format json \
                     --report-path /repo/${SECRET_DIR}/gitleaks-report.json \
@@ -141,7 +145,7 @@ pipeline {
         stage('SCA - OWASP Dependency-Check') {
             steps {
                 sh '''
-                  docker run --rm -v "$PWD:/src" owasp/dependency-check:latest \
+                  docker run --rm -v "${HOST_WORKSPACE}:/src" owasp/dependency-check:latest \
                     --scan /src \
                     --project ${APP_NAME} \
                     --format JSON \
@@ -155,7 +159,7 @@ pipeline {
         stage('SBOM - Syft') {
             steps {
                 sh '''
-                  docker run --rm -v "$PWD:/work" anchore/syft:latest dir:/work \
+                  docker run --rm -v "${HOST_WORKSPACE}:/work" anchore/syft:latest dir:/work \
                     -o cyclonedx-json=/work/${SBOM_DIR}/sbom-cyclonedx.json
                 '''
             }
@@ -177,7 +181,7 @@ pipeline {
             steps {
                 sh '''
                   docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
-                    -v "$PWD:/work" aquasec/trivy:latest image \
+                    -v "${HOST_WORKSPACE}:/work" aquasec/trivy:latest image \
                     --format json \
                     --output /work/${IMAGE_DIR}/trivy-image.json \
                     ${APP_NAME}:${BUILD_TAG_VERSION}
@@ -189,7 +193,7 @@ pipeline {
         stage('Security Gate') {
             steps {
                 sh '''
-                  docker run --rm -v "$PWD:/work" -w /work node:20-alpine \
+                  docker run --rm -v "${HOST_WORKSPACE}:/work" -w /work node:20-alpine \
                     sh -lc "node scripts/security-gate.js"
                 '''
             }
