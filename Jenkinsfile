@@ -18,6 +18,8 @@ pipeline {
         string(name: 'ECS_EXECUTION_ROLE_ARN', defaultValue: '', description: 'ECS task execution role ARN')
         string(name: 'ECS_TASK_ROLE_ARN', defaultValue: '', description: 'ECS task role ARN')
         string(name: 'CLOUDWATCH_LOG_GROUP', defaultValue: '/ecs/cicd-node-app', description: 'CloudWatch log group for ECS container logs')
+        booleanParam(name: 'ENABLE_SONARQUBE', defaultValue: false, description: 'Run SonarQube analysis and quality gate (requires Jenkins SonarQube plugin/config)')
+        string(name: 'SONARQUBE_SERVER', defaultValue: 'sonarqube', description: 'Jenkins SonarQube server configuration name')
         choice(name: 'DEPLOYMENT_STRATEGY', choices: ['rolling'], description: 'Deployment strategy (rolling implemented in this pipeline)')
         booleanParam(name: 'APPLY_ECR_LIFECYCLE_POLICY', defaultValue: true, description: 'Apply ecs/ecr-lifecycle-policy.json to ECR')
         string(name: 'KEEP_ECS_REVISIONS', defaultValue: '10', description: 'Number of ECS task definition revisions to keep active')
@@ -108,8 +110,11 @@ pipeline {
 
         // Step 6: Static Application Security Testing (SAST) with SonarQube
         stage('SAST - SonarQube') {
+            when {
+                expression { return params.ENABLE_SONARQUBE }
+            }
             steps {
-                withSonarQubeEnv('sonarqube') {
+                withSonarQubeEnv("${params.SONARQUBE_SERVER}") {
                     sh '''
                       sonar-scanner \
                         -Dsonar.projectKey=${APP_NAME} \
@@ -121,6 +126,9 @@ pipeline {
 
         // Step 7: Wait for SonarQube quality gate analysis
         stage('SAST Quality Gate') {
+            when {
+                expression { return params.ENABLE_SONARQUBE }
+            }
             steps {
                 timeout(time: 10, unit: 'MINUTES') {
                     waitForQualityGate abortPipeline: true
