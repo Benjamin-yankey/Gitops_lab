@@ -20,6 +20,7 @@ pipeline {
         string(name: 'CLOUDWATCH_LOG_GROUP', defaultValue: '/ecs/cicd-node-app', description: 'CloudWatch log group for ECS container logs')
         booleanParam(name: 'ENABLE_SONARQUBE', defaultValue: false, description: 'Run SonarQube analysis and quality gate (requires Jenkins SonarQube plugin/config)')
         string(name: 'SONARQUBE_SERVER', defaultValue: 'sonarqube', description: 'Jenkins SonarQube server configuration name')
+        string(name: 'GITLEAKS_IMAGE', defaultValue: 'zricethezav/gitleaks:latest', description: 'Container image used for secret scanning')
         choice(name: 'DEPLOYMENT_STRATEGY', choices: ['rolling'], description: 'Deployment strategy (rolling implemented in this pipeline)')
         booleanParam(name: 'APPLY_ECR_LIFECYCLE_POLICY', defaultValue: true, description: 'Apply ecs/ecr-lifecycle-policy.json to ECR')
         string(name: 'KEEP_ECS_REVISIONS', defaultValue: '10', description: 'Number of ECS task definition revisions to keep active')
@@ -140,7 +141,7 @@ pipeline {
         stage('Secret Scan - Gitleaks') {
             steps {
                 sh '''
-                  docker run --rm -v "${HOST_WORKSPACE}:/repo" gitleaks/gitleaks:latest detect \
+                  docker run --rm -v "${HOST_WORKSPACE}:/repo" "${GITLEAKS_IMAGE}" detect \
                     --source /repo \
                     --report-format json \
                     --report-path /repo/${SECRET_DIR}/gitleaks-report.json \
