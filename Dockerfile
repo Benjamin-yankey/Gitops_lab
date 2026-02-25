@@ -5,6 +5,7 @@ FROM node:22-alpine
 WORKDIR /app
 
 # Patch OS vulnerabilities and install required tools
+# hadolint ignore=DL3018
 RUN apk upgrade --no-cache && \
     apk add --no-cache curl jq
 

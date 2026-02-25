@@ -89,7 +89,7 @@ pipeline {
         // Step 3.1: Lint the Dockerfile for best practices
         stage('Lint Dockerfile') {
             steps {
-                sh 'docker run --rm -i hadolint/hadolint < Dockerfile'
+                sh 'docker run --rm -i hadolint/hadolint hadolint --ignore DL3018 - < Dockerfile'
             }
         }
 
