@@ -139,7 +139,9 @@ pipeline {
                         -e SONAR_AUTH_TOKEN="${SONAR_AUTH_TOKEN}" \
                         -v "${HOST_WORKSPACE}:/usr/src" \
                         sonarsource/sonar-scanner-cli \
-                        -Dsonar.projectKey=${APP_NAME} \
+                        -Dsonar.projectKey=benjamin-yankey_cicd-node-app \
+                        -Dsonar.organization=benjamin-yankey \
+                        -Dsonar.host.url=https://sonarcloud.io \
                         -Dsonar.projectVersion=${BUILD_TAG_VERSION}
                     '''
                 }
