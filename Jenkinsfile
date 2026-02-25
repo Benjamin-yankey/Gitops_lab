@@ -170,13 +170,44 @@ pipeline {
             }
         }
 
-        // Step 9: Software Composition Analysis (SCA) with npm audit
-        stage('SCA - npm audit') {
+        // Step 9: Software Composition Analysis (SCA) with OWASP Dependency-Check
+        stage('SCA - OWASP Dependency-Check') {
             steps {
-                sh '''
-                  docker run --rm -v "${HOST_WORKSPACE}:/work" -w /work node:20-alpine \
-                    sh -lc "npm audit --omit=dev --json > ${SCA_DIR}/npm-audit-report.json || true"
-                '''
+                script {
+                    // 1. Identify if the 'ben' key is available (Secret Text or Password)
+                    def nvdKey = null
+                    try {
+                        withCredentials([string(credentialsId: 'ben', variable: 'KEY')]) { nvdKey = KEY }
+                        echo "NVD API Key 'ben' verified (Secret Text)."
+                    } catch (Exception e) {
+                        try {
+                            withCredentials([usernamePassword(credentialsId: 'ben', usernameVariable: 'U', passwordVariable: 'P')]) { nvdKey = P }
+                            echo "NVD API Key 'ben' verified (Password type)."
+                        } catch (Exception e2) {
+                            echo "Warning: NVD Key 'ben' not found. Downloads will be very slow."
+                        }
+                    }
+
+                    // 2. Ensure cache directory exists on host (if mounted)
+                    // We assume /opt/jenkins_home/nvd-cache is the intended persistent storage
+                    sh "mkdir -p /var/jenkins_home/nvd-cache"
+
+                    // 3. Execute the scan
+                    // Note: We use --format JSON for reliability and speed (HTML generation can be fragile)
+                    // We also ensure proper quoting for paths with spaces (like 'James Mills')
+                    def apiFlag = nvdKey ? "--nvdApiKey '${nvdKey}'" : ""
+                    sh """
+                        docker run --rm \
+                          -v "${env.HOST_WORKSPACE}:/src" \
+                          -v "/opt/jenkins_home/nvd-cache:/usr/share/dependency-check/data" \
+                          owasp/dependency-check:latest \
+                          --scan /src \
+                          --project "${env.APP_NAME}" \
+                          --format JSON \
+                          --out "/src/${env.SCA_DIR}" \
+                          ${apiFlag}
+                    """
+                }
             }
         }
 

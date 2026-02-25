@@ -24,17 +24,36 @@ function safeReadJson(path) {
 }
 
 /**
- * Counts vulnerabilities from npm audit report
- * @param {object} report - Parsed npm audit report
- * @returns {object} - Counts of critical and high vulnerabilities
+ * Detects and counts vulnerabilities from a report (OWASP Dependency-Check or npm audit)
+ * @param {object} report - Parsed JSON report
+ * @returns {object} - Counts of CRITICAL and HIGH vulnerabilities
  */
-function countNpmAudit(report) {
+function countScaVulnerabilities(report) {
   const counts = { CRITICAL: 0, HIGH: 0 };
-  const vulns = (report.metadata && report.metadata.vulnerabilities) || {};
-  
-  counts.CRITICAL = vulns.critical || 0;
-  counts.HIGH = vulns.high || 0;
-  
+
+  // Case 1: OWASP Dependency-Check (JSON)
+  if (report.dependencies && Array.isArray(report.dependencies)) {
+    report.dependencies.forEach(dep => {
+      if (dep.vulnerabilities && Array.isArray(dep.vulnerabilities)) {
+        dep.vulnerabilities.forEach(vuln => {
+          const sev = String(vuln.severity || vuln.Severity || '').toUpperCase();
+          if (counts[sev] !== undefined) counts[sev]++;
+        });
+      }
+    });
+    return counts;
+  }
+
+  // Case 2: npm audit (JSON)
+  if (report.metadata && report.metadata.vulnerabilities) {
+    const vulns = report.metadata.vulnerabilities;
+    counts.CRITICAL = vulns.critical || 0;
+    counts.HIGH = vulns.high || 0;
+    return counts;
+  }
+
+  // Fallback or unknown format
+  console.warn('Unknown SCA report format, skipping automated vulnerability count.');
   return counts;
 }
 
@@ -47,7 +66,7 @@ function countTrivy(report) {
   const counts = { CRITICAL: 0, HIGH: 0 };
   for (const result of report.Results || []) {
     for (const vuln of result.Vulnerabilities || []) {
-      const sev = String(vuln.Severity || '').toUpperCase();
+      const sev = String(vuln.Severity || vuln.severity || '').toUpperCase();
       if (counts[sev] !== undefined) counts[sev] += 1;
     }
   }
@@ -79,17 +98,27 @@ function mergeCounts(a, b) {
 // Main execution block
 try {
   // Load scan reports
-  const sca = safeReadJson(files.sca);
-  const image = safeReadJson(files.image);
-  const secret = safeReadJson(files.secret);
+  // Find SCA report (prefer ODC, fallback to npm audit)
+  let scaPath = files.sca;
+  if (!fs.existsSync(scaPath)) {
+    const odcPath = 'reports/sca/dependency-check-report.json';
+    if (fs.existsSync(odcPath)) {
+      scaPath = odcPath;
+    }
+  }
+
+  const scaReport = safeReadJson(scaPath);
+  const imageReport = safeReadJson(files.image);
+  const secretReport = safeReadJson(files.secret);
 
   // Process vulnerability data
-  const scaCounts = countNpmAudit(sca);
-  const imageCounts = countTrivy(image);
+  const scaCounts = countScaVulnerabilities(scaReport);
+  const imageCounts = countTrivy(imageReport);
   const total = mergeCounts(scaCounts, imageCounts);
-  const secretCount = countGitleaks(secret);
+  const secretCount = countGitleaks(secretReport);
 
   // Log findings to console
+  console.log(`Using SCA report: ${scaPath}`);
   console.log(`SCA vulnerabilities: critical=${scaCounts.CRITICAL}, high=${scaCounts.HIGH}`);
   console.log(`Image vulnerabilities: critical=${imageCounts.CRITICAL}, high=${imageCounts.HIGH}`);
   console.log(`Secrets detected: ${secretCount}`);

@@ -1013,6 +1013,17 @@ make destroy   # runs terraform destroy
 
 ---
 
+### ❌ "SCA Error: Error generating the report for cicd-node-app (Exit Code 12)"
+
+**Cause:** This typically occurs with OWASP Dependency-Check when it fails to write the report file due to folder permissions inside the container or a corrupted data directory. It can also happen if Jenkins is running an old version of the `Jenkinsfile` before the optimization.
+
+**Fix:** 
+1. **Push latest changes:** Ensure you have pushed the updated `Jenkinsfile` that uses `npm audit` instead of OWASP. Use `git push` to sync your local changes.
+2. **Permission Check:** If still using OWASP, ensure the Jenkins user has write access to the `reports/` directory on the host: `sudo chmod -R 777 reports/`.
+3. **Switch to npm audit:** Verify that your `Jenkinsfile` is using the optimization: `npm audit --omit=dev --json > ${SCA_DIR}/npm-audit-report.json`.
+
+---
+
 ### ❌ "Security gate failed. Critical/High vulnerabilities or secrets were detected."
 
 **Cause:** The pipeline did exactly what it should — it found vulnerabilities!
