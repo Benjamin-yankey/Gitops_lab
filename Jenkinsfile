@@ -36,11 +36,8 @@ pipeline {
         SECRET_DIR = 'reports/secret'
         SBOM_DIR = 'reports/sbom'
         DEPLOY_DIR = 'reports/deploy'
-        // Initialize these with defaults to allow post-cleanup even if early stages fail
-        BUILD_TAG_VERSION = "build-${env.BUILD_NUMBER}-init"
-        IMAGE_URI = "pending"
-        ECR_URI = "pending"
-        SHORT_SHA = "init"
+        // Note: BUILD_TAG_VERSION, IMAGE_URI, ECR_URI, and SHORT_SHA are now initialized dynamically in the Build Metadata stage
+        // to avoid conflicts with Declarative Pipeline environment immutability issues.
     }
 
     stages {
@@ -377,7 +374,7 @@ pipeline {
             archiveArtifacts allowEmptyArchive: true, artifacts: 'reports/**/*, ecs/*.json, sonar-project.properties'
             // Clean up local Docker images to save disk space on the build agent
             script {
-                if (env.IMAGE_URI != "pending") {
+                if (env.IMAGE_URI && env.IMAGE_URI != "pending") {
                     sh '''
                       docker image rm ${APP_NAME}:${BUILD_TAG_VERSION} 2>/dev/null || true
                       docker image rm ${IMAGE_URI} 2>/dev/null || true
