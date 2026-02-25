@@ -26,119 +26,95 @@ function safeReadJson(path) {
 /**
  * Detects and counts vulnerabilities from a report (OWASP Dependency-Check or npm audit)
  * @param {object} report - Parsed JSON report
- * @returns {object} - Counts of CRITICAL and HIGH vulnerabilities
+ * @returns {object} - Findings include counts and IDs
  */
-function countScaVulnerabilities(report) {
-  const counts = { CRITICAL: 0, HIGH: 0 };
+function getScaFindings(report) {
+  const findings = { CRITICAL: 0, HIGH: 0, ids: [] };
 
-  // Case 1: OWASP Dependency-Check (JSON)
   if (report.dependencies && Array.isArray(report.dependencies)) {
     report.dependencies.forEach(dep => {
       if (dep.vulnerabilities && Array.isArray(dep.vulnerabilities)) {
         dep.vulnerabilities.forEach(vuln => {
           const sev = String(vuln.severity || vuln.Severity || '').toUpperCase();
-          if (counts[sev] !== undefined) counts[sev]++;
+          if (findings[sev] !== undefined) {
+            findings[sev]++;
+            findings.ids.push(`${vuln.name || vuln.id || 'Unknown'} (SCA: ${dep.fileName || 'manifest'})`);
+          }
         });
       }
     });
-    return counts;
+    return findings;
   }
 
-  // Case 2: npm audit (JSON)
   if (report.metadata && report.metadata.vulnerabilities) {
-    const vulns = report.metadata.vulnerabilities;
-    counts.CRITICAL = vulns.critical || 0;
-    counts.HIGH = vulns.high || 0;
-    return counts;
+    const v = report.metadata.vulnerabilities;
+    findings.CRITICAL = v.critical || 0;
+    findings.HIGH = v.high || 0;
+    return findings;
   }
-
-  // Fallback or unknown format
-  console.warn('Unknown SCA report format, skipping automated vulnerability count.');
-  return counts;
+  return findings;
 }
 
 /**
  * Counts vulnerabilities from Trivy image scan report
  * @param {object} report - Parsed image scan report
- * @returns {object} - Counts of CRITICAL and HIGH vulnerabilities
+ * @returns {object} - Findings include counts and IDs
  */
-function countTrivy(report) {
-  const counts = { CRITICAL: 0, HIGH: 0 };
+function getImageFindings(report) {
+  const findings = { CRITICAL: 0, HIGH: 0, ids: [] };
   for (const result of report.Results || []) {
     for (const vuln of result.Vulnerabilities || []) {
       const sev = String(vuln.Severity || vuln.severity || '').toUpperCase();
-      if (counts[sev] !== undefined) counts[sev] += 1;
+      if (findings[sev] !== undefined) {
+        findings[sev]++;
+        findings.ids.push(`${vuln.VulnerabilityID || vuln.id} (Image: ${vuln.PkgName || 'OS'})`);
+      }
     }
   }
-  return counts;
-}
-
-/**
- * Counts secrets found by Gitleaks
- * @param {array} report - Parsed secret report
- * @returns {number} - Number of detected secrets
- */
-function countGitleaks(report) {
-  return Array.isArray(report) ? report.length : 0;
-}
-
-/**
- * Merges two vulnerability count objects
- * @param {object} a - First count object
- * @param {object} b - Second count object
- * @returns {object} - Combined counts
- */
-function mergeCounts(a, b) {
-  return {
-    CRITICAL: (a.CRITICAL || 0) + (b.CRITICAL || 0),
-    HIGH: (a.HIGH || 0) + (b.HIGH || 0)
-  };
+  return findings;
 }
 
 // Main execution block
 try {
-  // Load scan reports
-  // Find SCA report (prefer ODC, fallback to npm audit)
   let scaPath = files.sca;
   if (!fs.existsSync(scaPath)) {
     const odcPath = 'reports/sca/dependency-check-report.json';
-    if (fs.existsSync(odcPath)) {
-      scaPath = odcPath;
-    }
+    if (fs.existsSync(odcPath)) scaPath = odcPath;
   }
 
-  const scaReport = safeReadJson(scaPath);
-  const imageReport = safeReadJson(files.image);
-  const secretReport = safeReadJson(files.secret);
+  const scaFindings = getScaFindings(safeReadJson(scaPath));
+  const imageFindings = getImageFindings(safeReadJson(files.image));
+  const secretCount = Array.isArray(safeReadJson(files.secret)) ? safeReadJson(files.secret).length : 0;
 
-  // Process vulnerability data
-  const scaCounts = countScaVulnerabilities(scaReport);
-  const imageCounts = countTrivy(imageReport);
-  const total = mergeCounts(scaCounts, imageCounts);
-  const secretCount = countGitleaks(secretReport);
+  const total = {
+    CRITICAL: scaFindings.CRITICAL + imageFindings.CRITICAL,
+    HIGH: scaFindings.HIGH + imageFindings.HIGH
+  };
+  const allIds = [...scaFindings.ids, ...imageFindings.ids];
 
-  // Log findings to console
   console.log(`Using SCA report: ${scaPath}`);
-  console.log(`SCA vulnerabilities: critical=${scaCounts.CRITICAL}, high=${scaCounts.HIGH}`);
-  console.log(`Image vulnerabilities: critical=${imageCounts.CRITICAL}, high=${imageCounts.HIGH}`);
-  console.log(`Secrets detected: ${secretCount}`);
+  console.log(`SCA: Critical=${scaFindings.CRITICAL}, High=${scaFindings.HIGH}`);
+  console.log(`Image: Critical=${imageFindings.CRITICAL}, High=${imageFindings.HIGH}`);
+  console.log(`Secrets: ${secretCount}`);
 
-  // Determine if deployment should be blocked
-  const hasBlockedVulns = sevOrder.some((sev) => total[sev] > 0);
+  const hasBlockedVulns = total.CRITICAL > 0 || total.HIGH > 0;
   const hasSecrets = secretCount > 0;
 
   if (hasBlockedVulns || hasSecrets) {
     console.error('---------------------------------------------------------');
     console.error('❌ SECURITY GATE FAILED');
-    console.error(`Reason: ${hasBlockedVulns ? 'Critical/High vulnerabilities' : ''}${hasBlockedVulns && hasSecrets ? ' and ' : ''}${hasSecrets ? 'Secrets' : ''} detected.`);
+    if (allIds.length > 0) {
+      console.error('Blocking Vulnerabilities:');
+      allIds.forEach(id => console.error(`  - ${id}`));
+    }
+    if (hasSecrets) console.error(`Reason: ${hasSecrets} Secret(s) detected.`);
     console.error(`Summary: Critical=${total.CRITICAL}, High=${total.HIGH}, Secrets=${secretCount}`);
     console.error('---------------------------------------------------------');
     process.exit(1);
   }
 
-  console.log('Security gate passed. No Critical/High vulnerabilities and no secrets detected.');
+  console.log('Security gate passed. No Critical/High vulnerabilities detected.');
 } catch (err) {
-  // Handle file reading or parsing errors
   console.error(`Security gate execution error: ${err.message}`);
   process.exit(2);
 }
