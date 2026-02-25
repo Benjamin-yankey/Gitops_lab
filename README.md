@@ -1,26 +1,31 @@
 # 📧 GitOps Mail System — Secure & Scalable
+
 ...
+
 > **A high-performance, secure mail system** that automatically tests, scans for vulnerabilities, and deploys to **Amazon ECS (Fargate)**. This project demonstrates a production-grade CI/CD pipeline integrated with a modern web application.
 
 ---
 
 ## 📖 Table of Contents
+
 ...
+
 ### What the app does
 
 The **GitOps Mail System** is a full-featured messaging platform built with Node.js and a premium dark-mode frontend. Key features include:
 
-| Feature | Description |
-|---------|-------------|
-| **Multi-folder** | Organize emails into Inbox, Starred, Sent, and Trash |
-| **Real-time Stats** | Live monitoring of unread and starred email counts |
-| **Search** | Instant client-side filtering and searching |
-| **Secure API** | Hardened Express.js backend with automated security gates |
-| **CI/CD Integrated**| Deploys via a 19-stage pipeline with mandatory security scans |
+| Feature              | Description                                                   |
+| -------------------- | ------------------------------------------------------------- |
+| **Multi-folder**     | Organize emails into Inbox, Starred, Sent, and Trash          |
+| **Real-time Stats**  | Live monitoring of unread and starred email counts            |
+| **Search**           | Instant client-side filtering and searching                   |
+| **Secure API**       | Hardened Express.js backend with automated security gates     |
+| **CI/CD Integrated** | Deploys via a 19-stage pipeline with mandatory security scans |
 
 **The real value** of this project is the **hardened CI/CD pipeline** that ensures every line of code in this mail system is scanned for vulnerabilities (SAST/SCA), secrets (Gitleaks), and container flaws (Trivy) before reaching production.
 
 ### Quick Start (Jenkins Pipeline)
+
 1. **Fork** this repo to your own account.
 2. **Deploy Infrastructure** using `terraform apply` in the `terraform/` directory.
 3. **Run Pipeline** in Jenkins using the parameters provided by Terraform output.
@@ -70,53 +75,9 @@ YOU push code to Git
 
 ---
 
-## 🏗️ Architecture Diagram
+## Architecture Diagram
 
-```
-┌──────────────┐       ┌──────────────────┐       ┌──────────────────────┐
-│   Developer  │──────▶│   Git Repository  │──────▶│     Jenkins Server   │
-│  (Your Mac)  │ push  │   (GitHub, etc.)  │ hook  │   (EC2 or Docker)    │
-└──────────────┘       └──────────────────┘       └──────────┬───────────┘
-                                                              │
-                        ┌─────────────────────────────────────┼─────────────────────┐
-                        │              Jenkins Pipeline       │                     │
-                        │                                     ▼                     │
-                        │  ┌────────┐  ┌──────────┐  ┌──────────────┐              │
-                        │  │ Tests  │  │ Security │  │  Docker      │              │
-                        │  │ (Jest) │  │ Scans    │  │  Build       │              │
-                        │  └────────┘  │          │  └──────┬───────┘              │
-                        │              │ SonarQube│         │                       │
-                        │              │ Gitleaks │         │                       │
-                        │              │ npm audit│   ┌─────▼─────┐                │
-                        │              │ Trivy    │   │ Trivy Scan │                │
-                        │              │ Syft     │   └─────▼─────┘                │
-                        │              └──────────┘         │                       │
-                        │                    │              │                       │
-                        │              ┌─────▼──────────────▼─────┐                │
-                        │              │    🚨 SECURITY GATE 🚨   │                │
-                        │              │ Blocks on CRITICAL/HIGH   │                │
-                        │              └─────────────┬────────────┘                │
-                        │                            │ PASS                        │
-                        └────────────────────────────┼────────────────────────────┘
-                                                     │
-                                                     ▼
-                              ┌──────────────────────────────────────┐
-                              │           AWS Cloud                   │
-                              │                                       │
-                              │  ┌─────────┐      ┌───────────────┐  │
-                              │  │   ECR   │      │   ECS Cluster  │  │
-                              │  │ (Image  │─────▶│   (Fargate)    │  │
-                              │  │  Store) │      │                │  │
-                              │  └─────────┘      │  ┌───────────┐ │  │
-                              │                   │  │ Container │ │  │
-                              │  ┌────────────┐   │  │  (app.js) │ │  │
-                              │  │ CloudWatch │◀──│  └───────────┘ │  │
-                              │  │   Logs     │   └───────────────┘  │
-                              │  └────────────┘                       │
-                              └──────────────────────────────────────┘
-```
-
----
+## ![Architecture Diagram](architecture-diagram.png)
 
 ## 📁 Project Files Explained
 
@@ -124,37 +85,38 @@ Here's what every file and folder does — read this to understand the project:
 
 ### Root Files
 
-| File | What it does | You need to touch it? |
-|------|-------------|----------------------|
-| `app.js` | The Express.js backend for the Mail System. Handles the mock database, API logic, and Activity Logging. |
-| `app.test.js` | Automated test suite for the mail API (Jest + Supertest). |
-| `public/` | **Frontend UI**: Premium dark-mode mail client (HTML/CSS/JS). |
-| `Jenkinsfile` | **The pipeline blueprint.** orchestrates the 19-stage secure deployment. |
-| `Dockerfile` | Packages the Node.js app and static UI for production on ECS. |
-| `scripts/security-gate.js` | The "Gatekeeper" script that enforces security compliance. |
-| `terraform/` | **Infrastructure as Code**: Provisions VPC, ECR, ECS, and Jenkins. |
+| File                       | What it does                                                                                            | You need to touch it? |
+| -------------------------- | ------------------------------------------------------------------------------------------------------- | --------------------- |
+| `app.js`                   | The Express.js backend for the Mail System. Handles the mock database, API logic, and Activity Logging. |
+| `app.test.js`              | Automated test suite for the mail API (Jest + Supertest).                                               |
+| `public/`                  | **Frontend UI**: Premium dark-mode mail client (HTML/CSS/JS).                                           |
+| `Jenkinsfile`              | **The pipeline blueprint.** orchestrates the 19-stage secure deployment.                                |
+| `Dockerfile`               | Packages the Node.js app and static UI for production on ECS.                                           |
+| `scripts/security-gate.js` | The "Gatekeeper" script that enforces security compliance.                                              |
+| `terraform/`               | **Infrastructure as Code**: Provisions VPC, ECR, ECS, and Jenkins.                                      |
 
 ### `ecs/` — ECS Configuration Files
 
-| File | What it does |
-|------|-------------|
-| `taskdef.template.json` | ECS task definition **template** with `__PLACEHOLDERS__`. The pipeline fills in real values at build time. |
-| `taskdef.rendered.example.json` | An **example** of what the filled-in task definition looks like. For reference only. |
-| `ecr-lifecycle-policy.json` | Tells ECR to automatically delete old images (untagged after 7 days, keep max 20 tagged). |
+| File                            | What it does                                                                                               |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `taskdef.template.json`         | ECS task definition **template** with `__PLACEHOLDERS__`. The pipeline fills in real values at build time. |
+| `taskdef.rendered.example.json` | An **example** of what the filled-in task definition looks like. For reference only.                       |
+| `ecr-lifecycle-policy.json`     | Tells ECR to automatically delete old images (untagged after 7 days, keep max 20 tagged).                  |
 
 ### `scripts/` — Pipeline Helper Scripts
 
-| File | What it does |
-|------|-------------|
-| `security-gate.js` | **The security gate.** Reads npm audit, Trivy, and Gitleaks reports. Exits with error if Critical/High vulns or secrets found. This is what blocks bad deployments! |
-| `render-ecs-taskdef.sh` | Replaces `__PLACEHOLDERS__` in the task definition template with actual values (image URI, role ARNs, etc.) |
-| `cleanup-ecs-revisions.sh` | Deletes old ECS task definition revisions, keeping only the most recent N. |
-| `inject-vulnerable-dependency.sh` | **Test script:** adds a known-vulnerable `lodash@4.17.11` to simulate a security failure. |
-| `remove-vulnerable-dependency.sh` | **Test script:** removes the vulnerable dependency to simulate a fix. |
+| File                              | What it does                                                                                                                                                        |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `security-gate.js`                | **The security gate.** Reads npm audit, Trivy, and Gitleaks reports. Exits with error if Critical/High vulns or secrets found. This is what blocks bad deployments! |
+| `render-ecs-taskdef.sh`           | Replaces `__PLACEHOLDERS__` in the task definition template with actual values (image URI, role ARNs, etc.)                                                         |
+| `cleanup-ecs-revisions.sh`        | Deletes old ECS task definition revisions, keeping only the most recent N.                                                                                          |
+| `inject-vulnerable-dependency.sh` | **Test script:** adds a known-vulnerable `lodash@4.17.11` to simulate a security failure.                                                                           |
+| `remove-vulnerable-dependency.sh` | **Test script:** removes the vulnerable dependency to simulate a fix.                                                                                               |
 
 ### `reports/` — Generated by Pipeline
 
 This folder is populated when Jenkins runs. It contains:
+
 - `reports/sca/` — npm audit results
 - `reports/image/` — Trivy container scan results
 - `reports/secret/` — Gitleaks secret scan results
@@ -163,27 +125,27 @@ This folder is populated when Jenkins runs. It contains:
 
 ### `docs/` and `evidence/`
 
-| Folder | What it contains |
-|--------|-----------------|
+| Folder                    | What it contains                                            |
+| ------------------------- | ----------------------------------------------------------- |
 | `docs/SECURE-CICD-ECS.md` | Detailed guide for the secure pipeline setup and validation |
-| `evidence/README.md` | Checklist of evidence to collect for project submission |
+| `evidence/README.md`      | Checklist of evidence to collect for project submission     |
 
 ### `terraform/` — Infrastructure as Code
 
 Terraform provisions **ALL** AWS infrastructure automatically. Run `terraform apply` once and everything is ready.
 
-| Module | What it creates |
-|--------|---------------|
-| `modules/vpc` | VPC, subnets, route tables, internet gateway |
-| `modules/ecr` | ECR repository + lifecycle policy |
-| `modules/ecs` | ECS cluster, service, task definition, IAM roles, security group, CloudWatch logs + alarms |
-| `modules/iam` | Jenkins IAM role with ECR push/pull, ECS deploy, CloudWatch, and PassRole permissions |
-| `modules/security` | Security groups for Jenkins and app server |
-| `modules/jenkins` | Jenkins EC2 instance with Docker + AWS CLI pre-installed |
-| `modules/monitoring` | CloudWatch alarms and VPC flow logs |
-| `modules/secrets` | AWS Secrets Manager for Jenkins password and SSH keys |
-| `modules/keypair` | Auto-generated SSH key pair |
-| `modules/vpc-endpoints` | VPC endpoints for private AWS API access |
+| Module                  | What it creates                                                                            |
+| ----------------------- | ------------------------------------------------------------------------------------------ |
+| `modules/vpc`           | VPC, subnets, route tables, internet gateway                                               |
+| `modules/ecr`           | ECR repository + lifecycle policy                                                          |
+| `modules/ecs`           | ECS cluster, service, task definition, IAM roles, security group, CloudWatch logs + alarms |
+| `modules/iam`           | Jenkins IAM role with ECR push/pull, ECS deploy, CloudWatch, and PassRole permissions      |
+| `modules/security`      | Security groups for Jenkins and app server                                                 |
+| `modules/jenkins`       | Jenkins EC2 instance with Docker + AWS CLI pre-installed                                   |
+| `modules/monitoring`    | CloudWatch alarms and VPC flow logs                                                        |
+| `modules/secrets`       | AWS Secrets Manager for Jenkins password and SSH keys                                      |
+| `modules/keypair`       | Auto-generated SSH key pair                                                                |
+| `modules/vpc-endpoints` | VPC endpoints for private AWS API access                                                   |
 
 ---
 
@@ -192,40 +154,52 @@ Terraform provisions **ALL** AWS infrastructure automatically. Run `terraform ap
 If these terms are new to you, read this section first:
 
 ### What is Docker?
+
 Docker packages your app and all its dependencies into a **container** — a lightweight, portable unit that runs the same everywhere. Think of it as a "box" that contains your app + everything it needs.
 
 ### What is a Docker Image vs Container?
+
 - **Image** = the blueprint/recipe (like a class in programming)
 - **Container** = a running instance of that image (like an object)
 
 ### What is ECR (Elastic Container Registry)?
+
 It's like Docker Hub, but hosted on your AWS account. Your pipeline pushes Docker images here. ECR stores them privately.
 
 ### What is ECS (Elastic Container Service)?
+
 ECS runs your Docker containers in the cloud. With **Fargate**, you don't manage any servers — AWS handles the infrastructure.
 
 ### What is a Task Definition?
+
 An ECS task definition tells ECS: "Here's how to run my container — use this image, this much CPU/memory, these environment variables, and send logs here."
 
 ### What is Jenkins?
+
 Jenkins is a server that watches your Git repository. When you push code, it automatically runs the pipeline (test → scan → build → deploy).
 
 ### What is SAST?
+
 **Static Application Security Testing** — scans your source code for bugs, code smells, and security issues WITHOUT running the app. Tool used: **SonarQube**.
 
 ### What is SCA?
+
 **Software Composition Analysis** — checks your production dependencies (npm packages) for known vulnerabilities. Tool used: **npm audit**.
 
 ### What is a Container Image Scan?
+
 Scans the built Docker image for OS-level and package vulnerabilities inside the container. Tool used: **Trivy**.
 
 ### What is Secret Scanning?
+
 Scans your code repository for accidentally committed secrets (API keys, passwords, tokens). Tool used: **Gitleaks**.
 
 ### What is an SBOM?
+
 **Software Bill of Materials** — a complete list of every component/library in your app. Like an "ingredients list" for software. Tool used: **Syft** (CycloneDX format).
 
 ### What is a Security Gate?
+
 A checkpoint in the pipeline that reads all scan results and **blocks deployment** if anything critical is found. Implemented in `scripts/security-gate.js`.
 
 ---
@@ -234,26 +208,26 @@ A checkpoint in the pipeline that reads all scan results and **blocks deployment
 
 ### For Running Locally (Minimum)
 
-| Tool | Version | How to install on Mac | Verify |
-|------|---------|----------------------|--------|
-| **Node.js** | 18+ | `brew install node@18` | `node --version` |
-| **npm** | 9+ | Comes with Node.js | `npm --version` |
-| **Git** | Any | `brew install git` | `git --version` |
+| Tool        | Version | How to install on Mac  | Verify           |
+| ----------- | ------- | ---------------------- | ---------------- |
+| **Node.js** | 18+     | `brew install node@18` | `node --version` |
+| **npm**     | 9+      | Comes with Node.js     | `npm --version`  |
+| **Git**     | Any     | `brew install git`     | `git --version`  |
 
 ### For Running with Docker (Recommended)
 
-| Tool | Version | How to install on Mac | Verify |
-|------|---------|----------------------|--------|
-| **Docker Desktop** | 20.10+ | [Download here](https://www.docker.com/products/docker-desktop/) | `docker --version` |
+| Tool               | Version | How to install on Mac                                            | Verify             |
+| ------------------ | ------- | ---------------------------------------------------------------- | ------------------ |
+| **Docker Desktop** | 20.10+  | [Download here](https://www.docker.com/products/docker-desktop/) | `docker --version` |
 
 ### For Full Pipeline (Jenkins + AWS)
 
-| Tool | Version | How to install/get | Verify |
-|------|---------|-------------------|--------|
-| **AWS Account** | — | [Sign up](https://aws.amazon.com/) | Log in to AWS Console |
-| **AWS CLI** | v2 | `brew install awscli` | `aws --version` |
-| **Jenkins** | LTS | Run via Docker (see below) | Access at `http://<jenkins-ip>:8080` |
-| **AWS IAM User** | — | Create in AWS Console (see IAM section below) | `aws sts get-caller-identity` |
+| Tool             | Version | How to install/get                            | Verify                               |
+| ---------------- | ------- | --------------------------------------------- | ------------------------------------ |
+| **AWS Account**  | —       | [Sign up](https://aws.amazon.com/)            | Log in to AWS Console                |
+| **AWS CLI**      | v2      | `brew install awscli`                         | `aws --version`                      |
+| **Jenkins**      | LTS     | Run via Docker (see below)                    | Access at `http://<jenkins-ip>:8080` |
+| **AWS IAM User** | —       | Create in AWS Console (see IAM section below) | `aws sts get-caller-identity`        |
 
 ### AWS CLI Configuration
 
@@ -298,11 +272,12 @@ npm test
 ```
 
 You should see output like:
+
 ```
  PASS  ./app.test.js
   App Tests
     ✓ GET / should return HTML page
-    ✓ GET /health should return healthy status  
+    ✓ GET /health should return healthy status
     ✓ GET /api/info should return app info
 
 Test Suites: 1 passed, 1 total
@@ -316,6 +291,7 @@ npm start
 ```
 
 You should see:
+
 ```
 Server running on port 5000
 ```
@@ -335,6 +311,8 @@ curl -X PUT http://localhost:5000/api/emails/1/read | jq
 # View the Frontend UI
 # Just open http://localhost:5000 in your browser!
 ```
+
+![Frontend UI](evidence/3.72.108.120_5000_.png)
 
 ### 1.6 Stop the app
 
@@ -376,6 +354,7 @@ curl http://localhost:5000/api/info
 ### 2.4 Stop it
 
 Press `Ctrl + C` or run:
+
 ```bash
 docker stop cicd-node-app-local
 ```
@@ -394,6 +373,7 @@ docker compose down            # stop
 > ⚠️ **This costs money!** AWS charges for ECS (Fargate), ECR storage, CloudWatch, etc. Use the [AWS Free Tier](https://aws.amazon.com/free/) where possible and **clean up when done** (see [Cleanup Guide](#-cleanup-guide)).
 
 **Terraform creates EVERYTHING for you automatically:**
+
 - ✅ VPC with public/private subnets and routing
 - ✅ ECR repository (Docker image storage) with lifecycle policy
 - ✅ ECS Cluster (Fargate) with service and task definition
@@ -498,20 +478,20 @@ terraform output jenkins_pipeline_parameters
 
 ### What Terraform Created (Summary)
 
-| Resource | Terraform Module | What it does |
-|----------|-----------------|-------------|
-| VPC + Subnets | `modules/vpc` | Network isolation for all resources |
-| ECR Repository | `modules/ecr` | Stores Docker images with auto-cleanup lifecycle policy |
-| ECS Cluster | `modules/ecs` | Fargate cluster to run containers |
-| ECS Service | `modules/ecs` | Keeps 1 container running, handles rolling deployments |
-| ECS Task Definition | `modules/ecs` | Initial container config (Jenkins updates this on each deploy) |
-| ECS Execution Role | `modules/ecs` | Lets ECS pull images from ECR and write to CloudWatch |
-| ECS Task Role | `modules/ecs` | Permissions for the app container itself |
-| ECS Security Group | `modules/ecs` | Allows port 5000 inbound from your IP |
-| Jenkins IAM Role | `modules/iam` | ECR push/pull, ECS register/update, CloudWatch, PassRole |
-| CloudWatch Log Group | `modules/ecs` | `/ecs/cicd-node-app` — receives container stdout/stderr |
-| CloudWatch Alarms | `modules/ecs` | CPU and memory alerts at 80% threshold |
-| Jenkins EC2 | `modules/jenkins` | CI/CD server with Docker access |
+| Resource             | Terraform Module  | What it does                                                   |
+| -------------------- | ----------------- | -------------------------------------------------------------- |
+| VPC + Subnets        | `modules/vpc`     | Network isolation for all resources                            |
+| ECR Repository       | `modules/ecr`     | Stores Docker images with auto-cleanup lifecycle policy        |
+| ECS Cluster          | `modules/ecs`     | Fargate cluster to run containers                              |
+| ECS Service          | `modules/ecs`     | Keeps 1 container running, handles rolling deployments         |
+| ECS Task Definition  | `modules/ecs`     | Initial container config (Jenkins updates this on each deploy) |
+| ECS Execution Role   | `modules/ecs`     | Lets ECS pull images from ECR and write to CloudWatch          |
+| ECS Task Role        | `modules/ecs`     | Permissions for the app container itself                       |
+| ECS Security Group   | `modules/ecs`     | Allows port 5000 inbound from your IP                          |
+| Jenkins IAM Role     | `modules/iam`     | ECR push/pull, ECS register/update, CloudWatch, PassRole       |
+| CloudWatch Log Group | `modules/ecs`     | `/ecs/cicd-node-app` — receives container stdout/stderr        |
+| CloudWatch Alarms    | `modules/ecs`     | CPU and memory alerts at 80% threshold                         |
+| Jenkins EC2          | `modules/jenkins` | CI/CD server with Docker access                                |
 
 ---
 
@@ -546,7 +526,6 @@ sudo cat /var/lib/jenkins/secrets/initialAdminPassword
 
 Or if you set `jenkins_admin_password` in `terraform.tfvars`, use that.
 
-
 ### 4.3 Install Required Plugins
 
 Go to **Manage Jenkins → Plugins → Available** and install:
@@ -563,6 +542,7 @@ Go to **Manage Jenkins → Plugins → Available** and install:
 Go to **Manage Jenkins → Credentials → System → Global → Add Credentials**
 
 Choose **AWS Credentials** or **Secret text** and add:
+
 - Your `AWS_ACCESS_KEY_ID`
 - Your `AWS_SECRET_ACCESS_KEY`
 
@@ -604,18 +584,18 @@ If you want to use the SAST scan:
 2. Click **"Build with Parameters"**
 3. Fill in the required fields:
 
-| Parameter | What to put | Example |
-|-----------|-------------|---------|
-| `AWS_REGION` | Your AWS region | `eu-central-1` |
-| `AWS_ACCOUNT_ID` | Your 12-digit AWS account ID | `123456789012` |
-| `ECR_REPOSITORY` | ECR repo name | `cicd-node-app` |
-| `ECS_CLUSTER` | ECS cluster name | `cicd-node-cluster` |
-| `ECS_SERVICE` | ECS service name | `cicd-node-service` |
-| `ECS_TASK_FAMILY` | Task definition family | `cicd-node-app` |
-| `ECS_EXECUTION_ROLE_ARN` | Full ARN of execution role | `arn:aws:iam::123456789012:role/ecsTaskExecutionRole` |
-| `ECS_TASK_ROLE_ARN` | Full ARN of task role | `arn:aws:iam::123456789012:role/cicd-node-app-task-role` |
-| `CLOUDWATCH_LOG_GROUP` | CloudWatch log group name | `/ecs/cicd-node-app` |
-| `ENABLE_SONARQUBE` | Enable SonarQube scan? | `false` (unless you have it set up) |
+| Parameter                | What to put                  | Example                                                  |
+| ------------------------ | ---------------------------- | -------------------------------------------------------- |
+| `AWS_REGION`             | Your AWS region              | `eu-central-1`                                           |
+| `AWS_ACCOUNT_ID`         | Your 12-digit AWS account ID | `123456789012`                                           |
+| `ECR_REPOSITORY`         | ECR repo name                | `cicd-node-app`                                          |
+| `ECS_CLUSTER`            | ECS cluster name             | `cicd-node-cluster`                                      |
+| `ECS_SERVICE`            | ECS service name             | `cicd-node-service`                                      |
+| `ECS_TASK_FAMILY`        | Task definition family       | `cicd-node-app`                                          |
+| `ECS_EXECUTION_ROLE_ARN` | Full ARN of execution role   | `arn:aws:iam::123456789012:role/ecsTaskExecutionRole`    |
+| `ECS_TASK_ROLE_ARN`      | Full ARN of task role        | `arn:aws:iam::123456789012:role/cicd-node-app-task-role` |
+| `CLOUDWATCH_LOG_GROUP`   | CloudWatch log group name    | `/ecs/cicd-node-app`                                     |
+| `ENABLE_SONARQUBE`       | Enable SonarQube scan?       | `false` (unless you have it set up)                      |
 
 4. Click **"Build"**
 
@@ -656,12 +636,15 @@ git commit -m "test: inject vulnerable dependency for gate validation"
 git push
 ```
 
+![Architecture Diagram](evidence/Jenkins_failed.png)
 **Trigger a Jenkins build.** Expected result:
+
 - ❌ The **Security Gate** stage FAILS
 - ❌ The pipeline STOPS — no deployment happens
 - Console output shows: `Security gate failed. Critical/High vulnerabilities or secrets were detected.`
 
 **Save evidence:**
+
 - Screenshot of the failed Jenkins build
 - The failed security report from `reports/sca/`
 
@@ -677,12 +660,15 @@ git commit -m "fix: remove vulnerable dependency - gate should pass"
 git push
 ```
 
+![Architecture Diagram](evidence/Jenkins_passed.png)
 **Trigger another Jenkins build.** Expected result:
+
 - ✅ The **Security Gate** stage PASSES
 - ✅ The pipeline continues to ECR push and ECS deployment
 - Console output shows: `Security gate passed. No Critical/High vulnerabilities and no secrets detected.`
 
 **Save evidence:**
+
 - Screenshot of the successful Jenkins build
 - All reports from `reports/`
 
@@ -692,41 +678,43 @@ git push
 
 Here's what happens at each stage, in order:
 
-| # | Stage | What happens | Can it fail the build? |
-|---|-------|-------------|----------------------|
-| 1 | **Checkout** | Clones your code from Git, creates `reports/` directories | Rarely |
-| 1.1 | **Lint Dockerfile** | Uses Hadolint to check for container best practices | Yes |
-| 1.2 | **Lint Scripts** | Uses ShellCheck to validate deployment shell scripts | Yes |
-| 2 | **Validate Required Inputs** | Checks that `AWS_ACCOUNT_ID`, `ECS_EXECUTION_ROLE_ARN`, and `ECS_TASK_ROLE_ARN` are filled in | Yes, if you forget to fill them |
-| 3 | **Build Metadata** | Generates version tags like `build-42-a1b2c3d4` using build number + git SHA | No |
-| 4 | **Install** | Runs `npm ci` inside a Node.js Docker container | Yes, if `package.json` is broken |
-| 5 | **Unit Tests** | Runs `npm test` with coverage | Yes, if tests fail |
-| 6 | **SAST - SonarQube** | Runs SonarQube static analysis (skipped if `ENABLE_SONARQUBE=false`) | Yes, if code quality too low |
-| 7 | **SAST Quality Gate** | Waits for SonarQube to finish analysis | Yes, if SonarQube quality gate fails |
-| 8 | **Secret Scan - Gitleaks** | Scans repo for accidentally committed secrets/keys/passwords | No (writes report, gate checks later) |
-| 9 | **SCA - npm audit** | Scans production dependencies for known CVEs using `npm audit --omit=dev` | No (writes report, gate checks later) |
-| 10 | **SBOM - Syft** | Generates a complete list of all software components in CycloneDX format | Rarely |
-| 11 | **Build Container** | Runs `docker build`, creates the production Docker image | Yes, if Dockerfile is broken |
-| 12 | **Image Scan - Trivy** | Scans the Docker image for OS-level and library vulnerabilities | No (writes report, gate checks later) |
-| 13 | **Security Gate** | 🚨 **THE KEY STAGE.** Runs `scripts/security-gate.js` which reads npm audit, Trivy, and Gitleaks reports. Fails if ANY Critical/High vuln or secret is found. | **YES — this is the main blocker** |
-| 14 | **ECR Login and Push** | Logs in to ECR, tags image with `build-*`, `sha-*`, `latest`, and pushes all three tags | Yes, if AWS auth fails |
-| 15 | **Apply ECR Lifecycle** | Applies `ecs/ecr-lifecycle-policy.json` to auto-delete old images | Rarely |
-| 16 | **Render ECS Task Definition** | Runs `scripts/render-ecs-taskdef.sh` to fill in `__PLACEHOLDERS__` in the template with real values | Yes, if env vars are missing |
-| 17 | **Register ECS Task Definition** | Registers the rendered JSON as a new task definition revision in AWS ECS | Yes, if JSON is invalid or permissions fail |
-| 18 | **Deploy to ECS Service** | Updates the ECS service to use the new task definition, waits for the service to be stable | Yes, if container fails to start |
-| 19 | **Cleanup Old ECS Revisions** | Deregisters old task definition revisions (keeps latest 10 by default) | Rarely |
+| #   | Stage                            | What happens                                                                                                                                                  | Can it fail the build?                      |
+| --- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| 1   | **Checkout**                     | Clones your code from Git, creates `reports/` directories                                                                                                     | Rarely                                      |
+| 1.1 | **Lint Dockerfile**              | Uses Hadolint to check for container best practices                                                                                                           | Yes                                         |
+| 1.2 | **Lint Scripts**                 | Uses ShellCheck to validate deployment shell scripts                                                                                                          | Yes                                         |
+| 2   | **Validate Required Inputs**     | Checks that `AWS_ACCOUNT_ID`, `ECS_EXECUTION_ROLE_ARN`, and `ECS_TASK_ROLE_ARN` are filled in                                                                 | Yes, if you forget to fill them             |
+| 3   | **Build Metadata**               | Generates version tags like `build-42-a1b2c3d4` using build number + git SHA                                                                                  | No                                          |
+| 4   | **Install**                      | Runs `npm ci` inside a Node.js Docker container                                                                                                               | Yes, if `package.json` is broken            |
+| 5   | **Unit Tests**                   | Runs `npm test` with coverage                                                                                                                                 | Yes, if tests fail                          |
+| 6   | **SAST - SonarQube**             | Runs SonarQube static analysis (skipped if `ENABLE_SONARQUBE=false`)                                                                                          | Yes, if code quality too low                |
+| 7   | **SAST Quality Gate**            | Waits for SonarQube to finish analysis                                                                                                                        | Yes, if SonarQube quality gate fails        |
+| 8   | **Secret Scan - Gitleaks**       | Scans repo for accidentally committed secrets/keys/passwords                                                                                                  | No (writes report, gate checks later)       |
+| 9   | **SCA - npm audit**              | Scans production dependencies for known CVEs using `npm audit --omit=dev`                                                                                     | No (writes report, gate checks later)       |
+| 10  | **SBOM - Syft**                  | Generates a complete list of all software components in CycloneDX format                                                                                      | Rarely                                      |
+| 11  | **Build Container**              | Runs `docker build`, creates the production Docker image                                                                                                      | Yes, if Dockerfile is broken                |
+| 12  | **Image Scan - Trivy**           | Scans the Docker image for OS-level and library vulnerabilities                                                                                               | No (writes report, gate checks later)       |
+| 13  | **Security Gate**                | 🚨 **THE KEY STAGE.** Runs `scripts/security-gate.js` which reads npm audit, Trivy, and Gitleaks reports. Fails if ANY Critical/High vuln or secret is found. | **YES — this is the main blocker**          |
+| 14  | **ECR Login and Push**           | Logs in to ECR, tags image with `build-*`, `sha-*`, `latest`, and pushes all three tags                                                                       | Yes, if AWS auth fails                      |
+| 15  | **Apply ECR Lifecycle**          | Applies `ecs/ecr-lifecycle-policy.json` to auto-delete old images                                                                                             | Rarely                                      |
+| 16  | **Render ECS Task Definition**   | Runs `scripts/render-ecs-taskdef.sh` to fill in `__PLACEHOLDERS__` in the template with real values                                                           | Yes, if env vars are missing                |
+| 17  | **Register ECS Task Definition** | Registers the rendered JSON as a new task definition revision in AWS ECS                                                                                      | Yes, if JSON is invalid or permissions fail |
+| 18  | **Deploy to ECS Service**        | Updates the ECS service to use the new task definition, waits for the service to be stable                                                                    | Yes, if container fails to start            |
+| 19  | **Cleanup Old ECS Revisions**    | Deregisters old task definition revisions (keeps latest 10 by default)                                                                                        | Rarely                                      |
 
 ---
 
 ## 🔍 Security Scans Explained
 
-| Scan Type | Tool | What It Checks | Report Location | Blocks Deployment? |
-|-----------|------|---------------|-----------------|-------------------|
-| **SAST** | SonarQube | Source code for bugs, code smells, security hotspots | SonarQube Dashboard | Yes (via Quality Gate) |
-| **SCA** | npm audit | production dependencies for known CVEs | `reports/sca/npm-audit-report.json` | Yes (via Security Gate) |
-| **Image Scan** | Trivy | Docker image for OS/package vulnerabilities | `reports/image/trivy-image.json` | Yes (via Security Gate) |
-| **Secret Scan** | Gitleaks | Git history for API keys, passwords, tokens | `reports/secret/gitleaks-report.json` | Yes (via Security Gate) |
-| **SBOM** | Syft | Generates inventory of all components | `reports/sbom/sbom-cyclonedx.json` | No (informational) |
+| Scan Type       | Tool      | What It Checks                                       | Report Location                       | Blocks Deployment?      |
+| --------------- | --------- | ---------------------------------------------------- | ------------------------------------- | ----------------------- |
+| **SAST**        | SonarQube | Source code for bugs, code smells, security hotspots | SonarQube Dashboard                   | Yes (via Quality Gate)  |
+| **SCA**         | npm audit | production dependencies for known CVEs               | `reports/sca/npm-audit-report.json`   | Yes (via Security Gate) |
+| **Image Scan**  | Trivy     | Docker image for OS/package vulnerabilities          | `reports/image/trivy-image.json`      | Yes (via Security Gate) |
+| **Secret Scan** | Gitleaks  | Git history for API keys, passwords, tokens          | `reports/secret/gitleaks-report.json` | Yes (via Security Gate) |
+| **SBOM**        | Syft      | Generates inventory of all components                | `reports/sbom/sbom-cyclonedx.json`    | No (informational)      |
+
+![Architecture Diagram](evidence/sonarqube.io_passed.png)
 
 ### How the Security Gate Decides
 
@@ -744,17 +732,17 @@ The logic is in `scripts/security-gate.js`:
 
 After a pipeline run, these files are created and archived in Jenkins:
 
-| Report | Location | Format | Description |
-|--------|----------|--------|-------------|
-| SCA Report | `reports/sca/npm-audit-report.json` | JSON | Detailed dependency vulnerability data |
-| Image Scan | `reports/image/trivy-image.json` | JSON | Container image vulnerability findings |
-| Secret Scan | `reports/secret/gitleaks-report.json` | JSON | Any secrets found in the codebase |
-| SBOM | `reports/sbom/sbom-cyclonedx.json` | CycloneDX JSON | Complete software bill of materials |
-| Rendered Task Def | `reports/deploy/taskdef.rendered.json` | JSON | The actual ECS task definition that was registered |
-| Task Def ARN | `reports/deploy/taskdef-arn.txt` | Text | The ARN of the registered task definition |
-| ECS Update | `reports/deploy/ecs-update-service.json` | JSON | Response from ECS service update |
-| ECS Status | `reports/deploy/ecs-service-status.json` | JSON | Final ECS service state after deployment |
-| Image URI | `reports/deploy/image-uri.txt` | Text | The full ECR image URI that was deployed |
+| Report            | Location                                 | Format         | Description                                        |
+| ----------------- | ---------------------------------------- | -------------- | -------------------------------------------------- |
+| SCA Report        | `reports/sca/npm-audit-report.json`      | JSON           | Detailed dependency vulnerability data             |
+| Image Scan        | `reports/image/trivy-image.json`         | JSON           | Container image vulnerability findings             |
+| Secret Scan       | `reports/secret/gitleaks-report.json`    | JSON           | Any secrets found in the codebase                  |
+| SBOM              | `reports/sbom/sbom-cyclonedx.json`       | CycloneDX JSON | Complete software bill of materials                |
+| Rendered Task Def | `reports/deploy/taskdef.rendered.json`   | JSON           | The actual ECS task definition that was registered |
+| Task Def ARN      | `reports/deploy/taskdef-arn.txt`         | Text           | The ARN of the registered task definition          |
+| ECS Update        | `reports/deploy/ecs-update-service.json` | JSON           | Response from ECS service update                   |
+| ECS Status        | `reports/deploy/ecs-service-status.json` | JSON           | Final ECS service state after deployment           |
+| Image URI         | `reports/deploy/image-uri.txt`           | Text           | The full ECR image URI that was deployed           |
 
 ---
 
@@ -762,23 +750,23 @@ After a pipeline run, these files are created and archived in Jenkins:
 
 These parameters are defined at the top of the `Jenkinsfile` and can be changed per build:
 
-| Parameter | Default | Required? | Description |
-|-----------|---------|-----------|-------------|
-| `AWS_REGION` | `eu-central-1` | Yes | AWS region where ECR and ECS are hosted |
-| `AWS_ACCOUNT_ID` | *(empty)* | **Yes** | Your 12-digit AWS account ID (e.g., `123456789012`) |
-| `ECR_REPOSITORY` | `cicd-node-app` | Yes | Name of the ECR repository to push images to |
-| `ECS_CLUSTER` | `cicd-node-cluster` | Yes | Name of your ECS cluster |
-| `ECS_SERVICE` | `cicd-node-service` | Yes | Name of your ECS service |
-| `ECS_TASK_FAMILY` | `cicd-node-app` | Yes | ECS task definition family name |
-| `ECS_EXECUTION_ROLE_ARN` | *(empty)* | **Yes** | Full ARN of the ECS task execution role |
-| `ECS_TASK_ROLE_ARN` | *(empty)* | **Yes** | Full ARN of the ECS task role |
-| `CLOUDWATCH_LOG_GROUP` | `/ecs/cicd-node-app` | Yes | CloudWatch log group for container logs |
-| `ENABLE_SONARQUBE` | `false` | No | Set to `true` only if you have SonarQube configured |
-| `SONARQUBE_SERVER` | `sonarqube` | No | Jenkins SonarQube configuration name |
-| `GITLEAKS_IMAGE` | `ghcr.io/gitleaks/gitleaks:latest` | No | Docker image used for secret scanning |
-| `DEPLOYMENT_STRATEGY` | `rolling` | Yes | Only `rolling` is implemented |
-| `APPLY_ECR_LIFECYCLE_POLICY` | `true` | No | Whether to apply the ECR cleanup policy |
-| `KEEP_ECS_REVISIONS` | `10` | No | How many old task definition revisions to keep |
+| Parameter                    | Default                            | Required? | Description                                         |
+| ---------------------------- | ---------------------------------- | --------- | --------------------------------------------------- |
+| `AWS_REGION`                 | `eu-central-1`                     | Yes       | AWS region where ECR and ECS are hosted             |
+| `AWS_ACCOUNT_ID`             | _(empty)_                          | **Yes**   | Your 12-digit AWS account ID (e.g., `123456789012`) |
+| `ECR_REPOSITORY`             | `cicd-node-app`                    | Yes       | Name of the ECR repository to push images to        |
+| `ECS_CLUSTER`                | `cicd-node-cluster`                | Yes       | Name of your ECS cluster                            |
+| `ECS_SERVICE`                | `cicd-node-service`                | Yes       | Name of your ECS service                            |
+| `ECS_TASK_FAMILY`            | `cicd-node-app`                    | Yes       | ECS task definition family name                     |
+| `ECS_EXECUTION_ROLE_ARN`     | _(empty)_                          | **Yes**   | Full ARN of the ECS task execution role             |
+| `ECS_TASK_ROLE_ARN`          | _(empty)_                          | **Yes**   | Full ARN of the ECS task role                       |
+| `CLOUDWATCH_LOG_GROUP`       | `/ecs/cicd-node-app`               | Yes       | CloudWatch log group for container logs             |
+| `ENABLE_SONARQUBE`           | `false`                            | No        | Set to `true` only if you have SonarQube configured |
+| `SONARQUBE_SERVER`           | `sonarqube`                        | No        | Jenkins SonarQube configuration name                |
+| `GITLEAKS_IMAGE`             | `ghcr.io/gitleaks/gitleaks:latest` | No        | Docker image used for secret scanning               |
+| `DEPLOYMENT_STRATEGY`        | `rolling`                          | Yes       | Only `rolling` is implemented                       |
+| `APPLY_ECR_LIFECYCLE_POLICY` | `true`                             | No        | Whether to apply the ECR cleanup policy             |
+| `KEEP_ECS_REVISIONS`         | `10`                               | No        | How many old task definition revisions to keep      |
 
 ---
 
@@ -789,6 +777,7 @@ These parameters are defined at the top of the `Jenkinsfile` and can be changed 
 The AWS credentials/role used by Jenkins needs these permissions:
 
 ### ECR Permissions
+
 ```json
 {
   "Effect": "Allow",
@@ -810,6 +799,7 @@ The AWS credentials/role used by Jenkins needs these permissions:
 ```
 
 ### ECS Permissions
+
 ```json
 {
   "Effect": "Allow",
@@ -828,6 +818,7 @@ The AWS credentials/role used by Jenkins needs these permissions:
 ```
 
 ### CloudWatch Logs Permissions
+
 ```json
 {
   "Effect": "Allow",
@@ -842,6 +833,7 @@ The AWS credentials/role used by Jenkins needs these permissions:
 ```
 
 ### IAM Pass Role (required for ECS task definitions)
+
 ```json
 {
   "Effect": "Allow",
@@ -892,6 +884,7 @@ Or use the **AWS Console → CloudWatch → Log groups → /ecs/cicd-node-app**.
 ### Setting Up Alarms (from Project-Monitoring)
 
 If you have monitoring alarms from a previous project, point them at:
+
 - **ECS CPU/Memory utilization** metrics
 - **CloudWatch log group** `/ecs/cicd-node-app` for error patterns
 - **ECS service** event logs for deployment failures
@@ -966,6 +959,7 @@ make destroy   # runs terraform destroy
 **Cause:** The OWASP Dependency-Check stage failed or didn't produce a report.
 
 **Fix:** Check the console output for the SCA stage. Possible issues:
+
 - Docker socket permissions (Jenkins can't run Docker containers)
 - Network issues (OWASP DC needs to download vulnerability databases)
 
@@ -975,7 +969,8 @@ make destroy   # runs terraform destroy
 
 **Cause:** This typically occurs with OWASP Dependency-Check when it fails to write the report file due to folder permissions inside the container or a corrupted data directory. It can also happen if Jenkins is running an old version of the `Jenkinsfile` before the optimization.
 
-**Fix:** 
+**Fix:**
+
 1. **Push latest changes:** Ensure you have pushed the updated `Jenkinsfile` that uses `npm audit` instead of OWASP. Use `git push` to sync your local changes.
 2. **Permission Check:** If still using OWASP, ensure the Jenkins user has write access to the `reports/` directory on the host: `sudo chmod -R 777 reports/`.
 3. **Switch to npm audit:** Verify that your `Jenkinsfile` is using the optimization: `npm audit --omit=dev --json > ${SCA_DIR}/npm-audit-report.json`.
@@ -995,6 +990,7 @@ make destroy   # runs terraform destroy
 **Cause:** Jenkins doesn't have access to the Docker socket.
 
 **Fix:**
+
 ```bash
 # On the Jenkins server/agent:
 sudo usermod -aG docker jenkins
@@ -1011,10 +1007,12 @@ sudo systemctl restart jenkins
 **Cause:** Terraform attempted to manage a CloudWatch alarm that was recently moved from one module (e.g., `ecs`) to another (e.g., `monitoring`), but the resource remained in the AWS environment without a corresponding state entry in the new module.
 
 **Fix:** Use `terraform import` to manually bring the orphaned resource into the new module's state:
+
 ```bash
 terraform import 'module.monitoring.aws_cloudwatch_metric_alarm.ecs_cpu[0]' cicd-pipeline-dev-ecs-high-cpu
 terraform import 'module.monitoring.aws_cloudwatch_metric_alarm.ecs_memory[0]' cicd-pipeline-dev-ecs-high-memory
 ```
+
 Then run `terraform apply` again.
 
 ---
@@ -1026,6 +1024,7 @@ Then run `terraform apply` again.
 **Cause:** The ECS service can't reach a stable state (container keeps crashing).
 
 **Fix:**
+
 1. Check CloudWatch logs: `aws logs tail /ecs/cicd-node-app --region eu-central-1`
 2. Check that the security group allows inbound traffic on port 5000
 3. Check that the container health check passes locally first
@@ -1037,6 +1036,7 @@ Then run `terraform apply` again.
 **Cause:** ECR login expired or failed.
 
 **Fix:** The pipeline runs `aws ecr get-login-password` automatically. Make sure:
+
 - AWS CLI is installed on Jenkins agent
 - AWS credentials are configured
 - The region is correct
@@ -1054,37 +1054,43 @@ Then run `terraform apply` again.
 During the development and hardening of this pipeline, several critical challenges were encountered and resolved:
 
 ### ⚡ SCA Performance Optimization
+
 **Challenge:** OWASP Dependency-Check was adding 10-15 minutes to every build due to the requirement of downloading the entire National Vulnerability Database (NVD) on every run.
 **Solution:** Replaced OWASP with `npm audit`. By using `npm audit --omit=dev --json`, the scanner now performs near-instant checks against the local dependency tree while ignoring non-production development tools, significantly reducing build friction without sacrificing security.
 
 ### 🛡️ Container & Task Hardening
+
 **Challenge:** The default ECS task configuration allowed for more runtime permission than necessary, increasing the impact of a potential container breakout.
 **Solution:** Hardened the `taskdef.template.json` by:
+
 - Setting `readonlyRootFilesystem: true` to prevent modifications to the container OS at runtime.
 - Adding `linuxParameters` to **drop ALL** kernel capabilities.
 
 ### 📉 Monitoring Module Centralization
+
 **Challenge:** Moving CloudWatch alarms from the `ecs` module to a centralized `monitoring` module caused Terraform to lose track of the existing alarms, resulting in "empty result" errors during apply.
 **Solution:** Transitioned to a unified observability model by merging ECS metrics into the monitoring module and using `terraform import` to successfully bridge the state gap for existing cloud resources.
 
 ### 🕵️ New Linting Layers
+
 Implemented **Hadolint** for Dockerfile validation and **ShellCheck** for deployment script integrity. These tools catch best-practice violations (like running as root or missing pipefails) before the code even reaches the build stage.
 
 ### 🔑 Session Token Management
+
 Managed multiple instances of `ExpiredToken` errors during AWS CLI and Terraform operations by implementing robust session refresh procedures and correctly handling MFA-backed AWS sessions.
 
 ## 🛠️ Makefile Commands (Quick Reference)
 
-| Command | What it does |
-|---------|-------------|
-| `make help` | Shows all available commands |
-| `make install` | Runs `npm ci` |
-| `make test` | Runs `npm test` (Jest) |
-| `make lint` | Runs ESLint |
-| `make build` | Builds Docker image locally |
-| `make run` | Starts the app with `npm start` |
-| `make clean` | Removes `node_modules`, `coverage`, prunes Docker |
-| `make deploy` | Runs Terraform apply (infrastructure) |
+| Command        | What it does                                       |
+| -------------- | -------------------------------------------------- |
+| `make help`    | Shows all available commands                       |
+| `make install` | Runs `npm ci`                                      |
+| `make test`    | Runs `npm test` (Jest)                             |
+| `make lint`    | Runs ESLint                                        |
+| `make build`   | Builds Docker image locally                        |
+| `make run`     | Starts the app with `npm start`                    |
+| `make clean`   | Removes `node_modules`, `coverage`, prunes Docker  |
+| `make deploy`  | Runs Terraform apply (infrastructure)              |
 | `make destroy` | Runs Terraform destroy (tears down infrastructure) |
 
 ---
@@ -1092,52 +1098,64 @@ Managed multiple instances of `ExpiredToken` errors during AWS CLI and Terraform
 ## ❓ Frequently Asked Questions (FAQ)
 
 ### Q: Do I need SonarQube to run this project?
+
 **A:** No! SonarQube is optional. Keep `ENABLE_SONARQUBE` set to `false` and the SAST/Quality Gate stages will be skipped. The other security scans (npm audit, Trivy, Gitleaks, Syft) will still run.
 
 ### Q: What does the pipeline actually deploy?
+
 **A:** The `app.js` Node.js server inside a Docker container, running on AWS ECS Fargate. The container listens on port 5000.
 
 ### Q: Why does `package.json` have `lodash 4.17.11`?
+
 **A:** That version is intentionally old and vulnerable. It's used to demonstrate the security gate. The `inject-vulnerable-dependency.sh` and `remove-vulnerable-dependency.sh` scripts toggle this.
 
 ### Q: How much does this cost on AWS?
+
 **A:** Rough estimates (varies by region):
+
 - ECS Fargate (1 task, 0.25 vCPU, 0.5 GB): ~$10/month
 - ECR: ~$0.10/GB/month for storage
 - CloudWatch Logs: ~$0.50/GB ingested
 - **Tip:** Always clean up when done!
 
 ### Q: Can I use GitHub Actions instead of Jenkins?
+
 **A:** The pipeline is written as a `Jenkinsfile`, but the same concepts apply to GitHub Actions. You'd translate each stage into a workflow step.
 
 ### Q: What's the difference between `build-*`, `sha-*`, and `latest` tags?
+
 **A:**
+
 - `build-42-a1b2c3d4` → Unique tag for each build (build number + git SHA)
 - `sha-a1b2c3d4` → Tag based on the git commit SHA alone
 - `latest` → Always points to the most recent build. Useful for quick testing but not recommended for production.
 
 ### Q: What is `awsvpc` network mode?
+
 **A:** Each ECS task gets its own Elastic Network Interface (ENI) with a private IP. This is required for Fargate and provides better network isolation.
 
 ### Q: How do I see my deployed app?
+
 **A:** After successful deployment:
+
 1. Go to **AWS Console → ECS → Clusters → cicd-node-cluster → Services → cicd-node-service → Tasks**
 2. Click on the running task
 3. Find the public IP (if `assignPublicIp=ENABLED`)
 4. Open `http://<public-ip>:5000/health`
 
 ### Q: What if I get charged too much?
+
 **A:** Follow the [Cleanup Guide](#-cleanup-guide) immediately. The biggest costs are Fargate tasks and NAT Gateways (if used). Always set desired count to 0 when not testing.
 
 ---
 
 ## 📚 Documentation Links
 
-| Document | Location | Description |
-|----------|----------|-------------|
+| Document               | Location                  | Description                                               |
+| ---------------------- | ------------------------- | --------------------------------------------------------- |
 | Secure CI/CD ECS Guide | `docs/SECURE-CICD-ECS.md` | Detailed setup, deployment flow, and validation procedure |
-| Runbook | `RUNBOOK.md` | Operational guide with step-by-step instructions |
-| Evidence Checklist | `evidence/README.md` | What to capture for project submission |
+| Runbook                | `RUNBOOK.md`              | Operational guide with step-by-step instructions          |
+| Evidence Checklist     | `evidence/README.md`      | What to capture for project submission                    |
 
 ### External References
 
@@ -1170,4 +1188,57 @@ If you're completely new, follow this order:
 
 ---
 
-*Built with ❤️ for learning secure DevOps practices.*
+_Built with ❤️ for learning secure DevOps practices._
+
+---
+
+## 🛠️ Troubleshooting & Lessons Learned (Developer Log)
+
+During the development and deployment of this GitOps Mail System, several real-world infrastructure and pipeline challenges were encountered and resolved. Here is a log of those issues and their solutions for future reference:
+
+### 1. Infrastructure (Terraform) Issues
+
+**Undeclared Variables and IAM Permissions:**
+
+- **Error:** Terraform `apply` failed due to undeclared `key_name` variables and insufficient IAM permissions (`ec2:DescribeAvailabilityZones`, `ec2:DescribeImages`).
+- **Solution:** Declared the missing `key_name` in `variables.tf` and `terraform.tfvars`. Updated the AWS IAM user policy executing the Terraform to include full EC2 Read/Write permissions necessary for provisioning.
+
+**Invalid CIDR Block Formats:**
+
+- **Error:** Security group rules rejected with invalid CIDR block format (e.g., using "YOUR_IP_ADDRESS/32" literally or omitting the subnet mask).
+- **Solution:** Ensured that `allowed_ips` in `terraform.tfvars` correctly used the `x.x.x.x/32` notation for specific IPs.
+
+### 2. Pipeline (Jenkins) Issues
+
+**SonarQube Webhook & Scanner Errors:**
+
+- **Error:** Pipeline failed at SAST stage with `sonar-scanner: not found`, `sonar.organization` errors, and webhook timeouts resulting in `HTTP ERROR 400 Invalid JSON Payload`.
+- **Solution:**
+  - Ensured the "SonarQube Scanner for Jenkins" plugin was installed directly in Jenkins.
+  - Passed explicit environment variables (`-e SONAR_HOST_URL` and `-e SONAR_TOKEN`) directly into the Dockerized `sonar-scanner-cli` command within the `Jenkinsfile`.
+  - Added a timeout catch and the ability to selectively disable SonarQube (`ENABLE_SONARQUBE=false`) for rapid deployment testing when SonarCloud webhooks lagged.
+
+**OWASP Dependency-Check Failures:**
+
+- **Error:** The SCA stage failed due to NVD API rate limits and Java Heap Space memory crashes out-of-the-box.
+- **Solution:**
+  - Integrated a secure Jenkins credential (`withCredentials`) to inject an NVD API Key.
+  - Updated the Docker execution string to include `-e JAVA_OPTS="-Xmx2g"` to provide enough memory for the scan.
+  - Explicitly targeted only `package.json` and `package-lock.json` (`--scan /work/package.json`) rather than scanning the entire directory to optimize performance.
+
+**Jenkins Declarative Pipeline Immutability:**
+
+- **Error:** Conflicts modifying `environment` block variables dynamically (like Git SHAs) midway through the pipeline.
+- **Solution:** Moved dynamic variable creation into a dedicated `Build Metadata` stage using `env.VAR_NAME = sh(...)` inside a `script {}` block, ensuring stable references for Docker tagging and ECR pushing downstream.
+
+### Application Deployment Issues
+
+**Code Coverage Failures (Jest):**
+
+- **Error:** `Jest: "global" coverage threshold for statements (80%) not met` after adding complex mail logic.
+- **Solution:** Added extensive test cases in `app.test.js` covering 404 error branches, empty email validation, draft handling, and persistent deletion, raising coverage to >93%.
+
+**ECS Connection Refused (Port 5000):**
+
+- **Error:** Cannot connect to the App Server IP (`ERR_CONNECTION_REFUSED`) after Terraform completes.
+- **Solution:** Realized the legacy EC2 instance is empty by default. The true production deployment targets the **ECS Fargate Cluster**, which is only populated _after_ Jenkins runs. Found the dynamic ECS Task Public IP via the AWS Console (or AWS CLI `ecs describe-tasks` & `ec2 describe-network-interfaces`).
