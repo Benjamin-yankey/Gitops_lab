@@ -134,15 +134,34 @@ pipeline {
             steps {
                 withSonarQubeEnv("${params.SONARQUBE_SERVER}") {
                     sh '''
+                      # 1. Clean up and prepare workspace for metadata
+                      rm -rf .scannerwork
+                      mkdir -p .scannerwork
+                      chmod 777 .scannerwork
+
+                      # 2. Run the scanner
+                      # We pass both SONAR_TOKEN and SONAR_AUTH_TOKEN for compatibility
+                      # We also explicitly set the project version and ensure output is visible
                       docker run --rm \
-                        -e SONAR_HOST_URL="${SONAR_HOST_URL}" \
+                        --user "$(id -u):$(id -g)" \
+                        -e SONAR_HOST_URL="https://sonarcloud.io" \
+                        -e SONAR_TOKEN="${SONAR_AUTH_TOKEN}" \
                         -e SONAR_AUTH_TOKEN="${SONAR_AUTH_TOKEN}" \
                         -v "${HOST_WORKSPACE}:/usr/src" \
-                        sonarsource/sonar-scanner-cli -X \
-                        -Dsonar.projectKey=benjamin-yankey_cicd-node-app \
-                        -Dsonar.organization=benjamin-yankey \
-                        -Dsonar.host.url=https://sonarcloud.io \
-                        -Dsonar.projectVersion=${BUILD_TAG_VERSION}
+                        -w /usr/src \
+                        sonarsource/sonar-scanner-cli:latest \
+                        -Dsonar.projectVersion=${BUILD_TAG_VERSION} \
+                        -Dsonar.working.directory=.scannerwork
+
+                      # 3. Verify metadata was generated (helps debugging)
+                      if [ -f .scannerwork/report-task.txt ]; then
+                          echo "✅ SonarScanner metadata generated successfully."
+                          cat .scannerwork/report-task.txt
+                      else
+                          echo "❌ ERROR: report-task.txt NOT found in .scannerwork/"
+                          ls -la .scannerwork/ || true
+                          exit 3
+                      fi
                     '''
                 }
             }
