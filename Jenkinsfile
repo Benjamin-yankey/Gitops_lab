@@ -19,7 +19,7 @@ pipeline {
         string(name: 'ECS_TASK_ROLE_ARN', defaultValue: 'arn:aws:iam::615299752577:role/cicd-pipeline-dev-ecs-task-role', description: 'ECS task role ARN')
         string(name: 'CLOUDWATCH_LOG_GROUP', defaultValue: '/ecs/cicd-node-app', description: 'CloudWatch log group for ECS container logs')
         booleanParam(name: 'ENABLE_SONARQUBE', defaultValue: true, description: 'Run SonarQube analysis and quality gate (requires Jenkins SonarQube plugin/config)')
-        string(name: 'SONARQUBE_SERVER', defaultValue: 'SonarCloud', description: 'Jenkins SonarQube server configuration name')
+        string(name: 'SONARQUBE_SERVER', defaultValue: 'sonarqube', description: 'Jenkins SonarQube server configuration name')
         string(name: 'GITLEAKS_IMAGE', defaultValue: 'ghcr.io/gitleaks/gitleaks:latest', description: 'Container image used for secret scanning')
         choice(name: 'DEPLOYMENT_STRATEGY', choices: ['rolling'], description: 'Deployment strategy (rolling implemented in this pipeline)')
         booleanParam(name: 'APPLY_ECR_LIFECYCLE_POLICY', defaultValue: true, description: 'Apply ecs/ecr-lifecycle-policy.json to ECR')
