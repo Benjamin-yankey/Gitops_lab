@@ -174,7 +174,7 @@ pipeline {
         stage('SCA - OWASP Dependency-Check') {
             steps {
                 script {
-                    // 1. Identify if the 'ben' key is available (Secret Text or Password)
+                    // 1. Identify if the 'ben' key is available
                     def nvdKey = null
                     try {
                         withCredentials([string(credentialsId: 'ben', variable: 'KEY')]) { nvdKey = KEY }
@@ -188,27 +188,30 @@ pipeline {
                         }
                     }
 
-                    // 2. Proactively clear locks and fix permissions for the persistent cache
-                    // This prevents 'Unable to obtain an exclusive lock on the H2 database' errors
+                    // 2. Clear locks and prepare directories
                     sh """
-                        mkdir -p /var/jenkins_home/nvd-cache
+                        mkdir -p /var/jenkins_home/nvd-cache ${env.SCA_DIR}
+                        chmod -R 777 /var/jenkins_home/nvd-cache ${env.SCA_DIR}
                         echo "Clearing stale ODC locks..."
                         rm -f /var/jenkins_home/nvd-cache/*.lock.db
-                        chmod -R 777 /var/jenkins_home/nvd-cache
                     """
 
-                    // 3. Execute the scan
-                    // Note: We use the HOST_WORKSPACE path for the source and host cache path for the data
+                    // 3. Execute the scan with optimized targeting (just manifests)
+                    // This dramatically improves stability and avoids memory/report generation errors
+                    // JAVA_OPTS is increased to 2GB to handle large dependency graphs
                     def apiFlag = nvdKey ? "--nvdApiKey '${nvdKey}'" : ""
                     sh """
                         docker run --rm \
-                          -v "${env.HOST_WORKSPACE}:/src" \
+                          --user root \
+                          -e JAVA_OPTS="-Xmx2g" \
+                          -v "${env.HOST_WORKSPACE}:/work" \
                           -v "/opt/jenkins_home/nvd-cache:/usr/share/dependency-check/data" \
                           owasp/dependency-check:latest \
-                          --scan /src \
+                          --scan /work/package.json \
+                          --scan /work/package-lock.json \
                           --project "${env.APP_NAME}" \
                           --format JSON \
-                          --out "/src/${env.SCA_DIR}" \
+                          --out /work/${env.SCA_DIR} \
                           ${apiFlag}
                     """
                 }
@@ -367,6 +370,7 @@ pipeline {
     post {
         always {
             // Archive build artifacts and scan reports for audit and debugging
+            sh "ls -R reports || true"
             archiveArtifacts allowEmptyArchive: true, artifacts: 'reports/**/*, ecs/*.json, sonar-project.properties'
             // Clean up local Docker images to save disk space on the build agent
             script {
