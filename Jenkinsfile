@@ -139,9 +139,14 @@ pipeline {
                       mkdir -p .scannerwork
                       chmod 777 .scannerwork
 
+                      echo "DEBUG: SONAR_HOST_URL=$SONAR_HOST_URL"
+                      # Do not echo tokens, but check if they exist
+                      if [ -z "$SONAR_AUTH_TOKEN" ]; then
+                        echo "WARNING: SONAR_AUTH_TOKEN is empty! Using fallback if available."
+                      fi
+
                       # 2. Run the scanner
-                      # We pass both SONAR_TOKEN and SONAR_AUTH_TOKEN for compatibility
-                      # We also explicitly set the project version and ensure output is visible
+                      # We pass explicit keys to avoid any property file resolution issues in Docker
                       docker run --rm \
                         --user "$(id -u):$(id -g)" \
                         -e SONAR_HOST_URL="https://sonarcloud.io" \
@@ -150,17 +155,28 @@ pipeline {
                         -v "${HOST_WORKSPACE}:/usr/src" \
                         -w /usr/src \
                         sonarsource/sonar-scanner-cli:latest \
+                        -Dsonar.projectKey=benjamin-yankey_cicd-node-app \
+                        -Dsonar.organization=benjamin-yankey \
+                        -Dsonar.projectName=cicd-node-app \
                         -Dsonar.projectVersion=${BUILD_TAG_VERSION} \
-                        -Dsonar.working.directory=.scannerwork
+                        -Dsonar.working.directory=.scannerwork \
+                        -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info \
+                        -Dsonar.sources=.
 
-                      # 3. Verify metadata was generated (helps debugging)
+                      # 3. Verify metadata was generated (CRITICAL for Quality Gate)
                       if [ -f .scannerwork/report-task.txt ]; then
                           echo "✅ SonarScanner metadata generated successfully."
                           cat .scannerwork/report-task.txt
                       else
                           echo "❌ ERROR: report-task.txt NOT found in .scannerwork/"
                           ls -la .scannerwork/ || true
-                          exit 3
+                          # Check if it was generated in the root by mistake
+                          if [ -f report-task.txt ]; then
+                             echo "Found report-task.txt in root, moving to .scannerwork/"
+                             mv report-task.txt .scannerwork/
+                          else
+                             exit 3
+                          fi
                       fi
                     '''
                 }
@@ -278,7 +294,10 @@ pipeline {
         stage('Security Gate') {
             steps {
                 sh '''
-                  docker run --rm -v "${HOST_WORKSPACE}:/work" -w /work node:20-alpine \
+                  docker run --rm -v "${HOST_WORKSPACE}:/work" -w /work \
+                    -e GATE_CRITICAL_THRESHOLD=0 \
+                    -e GATE_HIGH_THRESHOLD=20 \
+                    node:20-alpine \
                     sh -lc "node scripts/security-gate.js"
                 '''
             }

@@ -4,8 +4,9 @@ FROM node:22-alpine
 # Set the working directory inside the container
 WORKDIR /app
 
-# Patch OS vulnerabilities by upgrading all packages to their latest versions
-RUN apk upgrade --no-cache
+# Patch OS vulnerabilities and install required tools
+RUN apk upgrade --no-cache && \
+    apk add --no-cache curl jq
 
 # Copy package.json and package-lock.json to install dependencies
 COPY package*.json ./
