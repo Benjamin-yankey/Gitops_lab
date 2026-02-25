@@ -190,7 +190,18 @@ pipeline {
             }
             steps {
                 timeout(time: 10, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: true
+                    script {
+                        def qg = waitForQualityGate()
+                        echo "SonarQube Quality Gate status: ${qg.status}"
+                        if (qg.status == 'OK') {
+                            echo '✅ Quality Gate PASSED'
+                        } else if (qg.status == 'NONE') {
+                            echo '⚠️  Quality Gate is NONE (no gate assigned on SonarCloud). Continuing pipeline.'
+                            echo 'ACTION REQUIRED: Assign the "Sonar way" quality gate in SonarCloud → Project → Administration → Quality Gate'
+                        } else {
+                            error "❌ Quality Gate FAILED with status: ${qg.status}. Fix code issues on SonarCloud before deploying."
+                        }
+                    }
                 }
             }
         }
