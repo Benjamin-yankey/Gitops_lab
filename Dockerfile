@@ -14,8 +14,9 @@ COPY package*.json ./
 # Install only production dependencies for a smaller image size
 RUN npm ci --only=production
 
-# Copy the application source code
+# Copy the application source code and public assets
 COPY app.js .
+COPY public/ ./public/
 
 # Expose the application port (5000)
 EXPOSE 5000

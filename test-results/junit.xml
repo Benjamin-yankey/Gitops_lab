@@ -1,11 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="jest tests" tests="3" failures="0" errors="0" time="0.212">
-  <testsuite name="App Tests" errors="0" failures="0" skipped="0" timestamp="2026-02-24T17:28:34" time="0.172" tests="3">
-    <testcase classname="App Tests GET / should return HTML page" name="App Tests GET / should return HTML page" time="0.01">
+<testsuites name="jest tests" tests="7" failures="0" errors="0" time="0.265">
+  <testsuite name="Mail System API Tests" errors="0" failures="0" skipped="0" timestamp="2026-02-25T10:15:27" time="0.224" tests="7">
+    <testcase classname="Mail System API Tests GET /health should return healthy status" name="Mail System API Tests GET /health should return healthy status" time="0.009">
     </testcase>
-    <testcase classname="App Tests GET /health should return healthy status" name="App Tests GET /health should return healthy status" time="0.003">
+    <testcase classname="Mail System API Tests GET /api/info should return app info and stats" name="Mail System API Tests GET /api/info should return app info and stats" time="0.004">
     </testcase>
-    <testcase classname="App Tests GET /api/info should return app info" name="App Tests GET /api/info should return app info" time="0.003">
+    <testcase classname="Mail System API Tests GET /api/emails should return list of emails" name="Mail System API Tests GET /api/emails should return list of emails" time="0.001">
+    </testcase>
+    <testcase classname="Mail System API Tests POST /api/emails should create a new email" name="Mail System API Tests POST /api/emails should create a new email" time="0.005">
+    </testcase>
+    <testcase classname="Mail System API Tests PUT /api/emails/:id/read should mark email as read" name="Mail System API Tests PUT /api/emails/:id/read should mark email as read" time="0.001">
+    </testcase>
+    <testcase classname="Mail System API Tests PUT /api/emails/:id/star should toggle star status" name="Mail System API Tests PUT /api/emails/:id/star should toggle star status" time="0.001">
+    </testcase>
+    <testcase classname="Mail System API Tests DELETE /api/emails/:id should move email to trash" name="Mail System API Tests DELETE /api/emails/:id should move email to trash" time="0.001">
     </testcase>
   </testsuite>
 </testsuites>

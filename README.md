@@ -1,68 +1,30 @@
-# 🔒 Secure CI/CD Pipeline — ECS + SAST/SCA
-
-[![Jenkins](https://img.shields.io/badge/Jenkins-LTS-red)](https://www.jenkins.io/)
-[![Docker](https://img.shields.io/badge/Docker-20.10+-blue)](https://www.docker.com/)
-[![Node.js](https://img.shields.io/badge/Node.js-18+-green)](https://nodejs.org/)
-[![AWS](https://img.shields.io/badge/AWS-ECR%20%2B%20ECS-orange)](https://aws.amazon.com/)
-[![Security](https://img.shields.io/badge/Security-SAST%20%7C%20SCA%20%7C%20Trivy%20%7C%20Gitleaks-purple)](https://owasp.org/)
-
-> **A hardened CI/CD pipeline** that automatically tests, scans for vulnerabilities, and deploys a Node.js app to **Amazon ECS (Fargate)**. If any **Critical or High** security issues are found, the pipeline **blocks the deployment** automatically.
+# 📧 GitOps Mail System — Secure & Scalable
+...
+> **A high-performance, secure mail system** that automatically tests, scans for vulnerabilities, and deploys to **Amazon ECS (Fargate)**. This project demonstrates a production-grade CI/CD pipeline integrated with a modern web application.
 
 ---
 
 ## 📖 Table of Contents
-
-1. [What Is This Project?](#-what-is-this-project)
-2. [How Does It Work? (The Big Picture)](#-how-does-it-work-the-big-picture)
-3. [Architecture Diagram](#-architecture-diagram)
-4. [Project Files Explained](#-project-files-explained)
-5. [Key Concepts for Beginners](#-key-concepts-for-beginners)
-6. [Prerequisites — What You Need Before Starting](#-prerequisites--what-you-need-before-starting)
-7. [Step 1: Run the App Locally (Try This First!)](#-step-1-run-the-app-locally-try-this-first)
-8. [Step 2: Run with Docker Locally](#-step-2-run-with-docker-locally)
-9. [Step 3: Set Up AWS (ECR + ECS)](#-step-3-set-up-aws-ecr--ecs)
-10. [Step 4: Set Up Jenkins](#-step-4-set-up-jenkins)
-11. [Step 5: Run the Pipeline](#-step-5-run-the-pipeline)
-12. [Step 6: Test the Security Gate (Fail then Pass)](#-step-6-test-the-security-gate-fail-then-pass)
-13. [Pipeline Stages Explained (All 19 Steps)](#-pipeline-stages-explained-all-19-steps)
-14. [Security Scans Explained](#-security-scans-explained)
-15. [Reports and Artifacts](#-reports-and-artifacts)
-16. [Jenkins Parameters Reference](#-jenkins-parameters-reference)
-17. [AWS IAM Permissions Required](#-aws-iam-permissions-required)
-18. [CloudWatch Logging & Monitoring](#-cloudwatch-logging--monitoring)
-19. [Cleanup Guide](#-cleanup-guide)
-20. [Troubleshooting (Common Errors)](#-troubleshooting-common-errors)
-21. [Recent Updates & Engineering Challenges](#-recent-updates--engineering-challenges)
-22. [Makefile Commands (Quick Reference)](#-makefile-commands-quick-reference)
-23. [Frequently Asked Questions (FAQ)](#-frequently-asked-questions-faq)
-24. [Documentation Links](#-documentation-links)
-
----
-
-## 🤔 What Is This Project?
-
-This project is a **secure, automated deployment pipeline**. Here's what that means in plain English:
-
-| Term | What it means |
-|------|---------------|
-| **CI/CD** | Continuous Integration / Continuous Deployment — every time you push code, it automatically tests, scans, builds, and deploys your app |
-| **Pipeline** | A sequence of automated steps that your code goes through (like an assembly line in a factory) |
-| **Security Gate** | A checkpoint that **blocks deployment** if vulnerabilities are found |
-| **ECS** | Amazon Elastic Container Service — runs your Docker container in the cloud |
-| **ECR** | Amazon Elastic Container Registry — stores your Docker images (like Docker Hub, but on AWS) |
-| **Fargate** | A serverless way to run containers on AWS (you don't manage servers) |
-
+...
 ### What the app does
 
-The app itself is simple — a Node.js/Express web server with three endpoints:
+The **GitOps Mail System** is a full-featured messaging platform built with Node.js and a premium dark-mode frontend. Key features include:
 
-| Endpoint | What it returns |
-|----------|-----------------|
-| `GET /` | An HTML page saying "CI/CD Pipeline App" with version info |
-| `GET /health` | `{ "status": "healthy" }` — used by AWS to check if the app is alive |
-| `GET /api/info` | `{ "version": "...", "deploymentTime": "...", "status": "running" }` |
+| Feature | Description |
+|---------|-------------|
+| **Multi-folder** | Organize emails into Inbox, Starred, Sent, and Trash |
+| **Real-time Stats** | Live monitoring of unread and starred email counts |
+| **Search** | Instant client-side filtering and searching |
+| **Secure API** | Hardened Express.js backend with automated security gates |
+| **CI/CD Integrated**| Deploys via a 19-stage pipeline with mandatory security scans |
 
-**The real value** of this project is the **pipeline** that builds, scans, and deploys this app securely.
+**The real value** of this project is the **hardened CI/CD pipeline** that ensures every line of code in this mail system is scanned for vulnerabilities (SAST/SCA), secrets (Gitleaks), and container flaws (Trivy) before reaching production.
+
+### Quick Start (Jenkins Pipeline)
+1. **Fork** this repo to your own account.
+2. **Deploy Infrastructure** using `terraform apply` in the `terraform/` directory.
+3. **Run Pipeline** in Jenkins using the parameters provided by Terraform output.
+4. **Access Mail Client** via the AWS Load Balancer URL.
 
 ---
 
@@ -164,17 +126,13 @@ Here's what every file and folder does — read this to understand the project:
 
 | File | What it does | You need to touch it? |
 |------|-------------|----------------------|
-| `app.js` | The Node.js web server (Express). This is the actual app being deployed. | Only if you want to change the app |
-| `app.test.js` | Unit tests for `app.js`. Uses Jest + Supertest. | Only if you add new endpoints |
-| `Jenkinsfile` | **The pipeline definition.** All 19 stages are here. Jenkins reads this file. | When you need to customize the pipeline |
-| `Dockerfile` | Instructions to build the Docker container image for the app. | Rarely |
-| `docker-compose.yml` | Lets you run the app locally with `docker compose up`. | Rarely |
-| `package.json` | Node.js project config — lists dependencies and scripts. | When adding packages |
-| `Makefile` | Shortcuts for common commands (`make install`, `make test`, etc.) | Never (just use it) |
-| `sonar-project.properties` | Config for SonarQube code analysis. | Only if your SonarQube setup differs |
-| `.gitignore` | Files/folders Git should ignore. | Rarely |
-| `RUNBOOK.md` | Operational runbook with quick-start and troubleshooting. | Read it for reference |
-| `collect-evidence.sh` | Script to collect logs/evidence for project submission. | Run it when collecting evidence |
+| `app.js` | The Express.js backend for the Mail System. Handles the mock database, API logic, and Activity Logging. |
+| `app.test.js` | Automated test suite for the mail API (Jest + Supertest). |
+| `public/` | **Frontend UI**: Premium dark-mode mail client (HTML/CSS/JS). |
+| `Jenkinsfile` | **The pipeline blueprint.** orchestrates the 19-stage secure deployment. |
+| `Dockerfile` | Packages the Node.js app and static UI for production on ECS. |
+| `scripts/security-gate.js` | The "Gatekeeper" script that enforces security compliance. |
+| `terraform/` | **Infrastructure as Code**: Provisions VPC, ECR, ECS, and Jenkins. |
 
 ### `ecs/` — ECS Configuration Files
 
@@ -362,20 +320,20 @@ You should see:
 Server running on port 5000
 ```
 
-### 1.5 Test the endpoints (open a NEW terminal tab)
+### 1.5 Test the Mail API (open a NEW terminal tab)
 
 ```bash
-# Health check
-curl http://localhost:5000/health
-# Expected: {"status":"healthy"}
+# Get all emails
+curl http://localhost:5000/api/emails | jq
 
-# App info
-curl http://localhost:5000/api/info
-# Expected: {"version":"1.0.0","deploymentTime":"...","status":"running"}
+# Get system info & statistics
+curl http://localhost:5000/api/info | jq
 
-# Main page (opens HTML)
-curl http://localhost:5000/
-# Expected: HTML page with "CI/CD Pipeline App"
+# Mark the first email as read
+curl -X PUT http://localhost:5000/api/emails/1/read | jq
+
+# View the Frontend UI
+# Just open http://localhost:5000 in your browser!
 ```
 
 ### 1.6 Stop the app
