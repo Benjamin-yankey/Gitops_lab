@@ -266,10 +266,10 @@ pipeline {
         stage('ECR Login and Push') {
             steps {
                 sh '''
-                  aws ecr describe-repositories --repository-names ${ECR_REPOSITORY} --region ${AWS_REGION} >/dev/null 2>&1 || \
-                    aws ecr create-repository --repository-name ${ECR_REPOSITORY} --region ${AWS_REGION} >/dev/null
+                  docker run --rm --network host amazon/aws-cli ecr describe-repositories --repository-names ${ECR_REPOSITORY} --region ${AWS_REGION} >/dev/null 2>&1 || \
+                    docker run --rm --network host amazon/aws-cli ecr create-repository --repository-name ${ECR_REPOSITORY} --region ${AWS_REGION} >/dev/null
 
-                  aws ecr get-login-password --region ${AWS_REGION} | \
+                  docker run --rm --network host amazon/aws-cli ecr get-login-password --region ${AWS_REGION} | \
                     docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
 
                   docker tag ${APP_NAME}:${BUILD_TAG_VERSION} ${IMAGE_URI}
@@ -292,9 +292,9 @@ pipeline {
             }
             steps {
                 sh '''
-                  aws ecr put-lifecycle-policy \
+                  docker run --rm --network host -v "${HOST_WORKSPACE}:/work" -w /work amazon/aws-cli ecr put-lifecycle-policy \
                     --repository-name ${ECR_REPOSITORY} \
-                    --lifecycle-policy-text file://ecs/ecr-lifecycle-policy.json \
+                    --lifecycle-policy-text file:///work/ecs/ecr-lifecycle-policy.json \
                     --region ${AWS_REGION} > ${DEPLOY_DIR}/ecr-lifecycle-policy.json
                 '''
             }
@@ -320,8 +320,8 @@ pipeline {
         stage('Register ECS Task Definition') {
             steps {
                 sh '''
-                  aws ecs register-task-definition \
-                    --cli-input-json file://${DEPLOY_DIR}/taskdef.rendered.json \
+                  docker run --rm --network host -v "${HOST_WORKSPACE}:/work" -w /work amazon/aws-cli ecs register-task-definition \
+                    --cli-input-json file:///work/${DEPLOY_DIR}/taskdef.rendered.json \
                     --region ${AWS_REGION} \
                     --query 'taskDefinition.taskDefinitionArn' \
                     --output text > ${DEPLOY_DIR}/taskdef-arn.txt
@@ -338,19 +338,19 @@ pipeline {
                 sh '''
                   TASK_DEF_ARN=$(cat ${DEPLOY_DIR}/taskdef-arn.txt)
 
-                  aws ecs update-service \
+                  docker run --rm --network host amazon/aws-cli ecs update-service \
                     --cluster ${ECS_CLUSTER} \
                     --service ${ECS_SERVICE} \
                     --task-definition "$TASK_DEF_ARN" \
                     --force-new-deployment \
                     --region ${AWS_REGION} > ${DEPLOY_DIR}/ecs-update-service.json
 
-                  aws ecs wait services-stable \
+                  docker run --rm --network host amazon/aws-cli ecs wait services-stable \
                     --cluster ${ECS_CLUSTER} \
                     --services ${ECS_SERVICE} \
                     --region ${AWS_REGION}
 
-                  aws ecs describe-services \
+                  docker run --rm --network host amazon/aws-cli ecs describe-services \
                     --cluster ${ECS_CLUSTER} \
                     --services ${ECS_SERVICE} \
                     --region ${AWS_REGION} > ${DEPLOY_DIR}/ecs-service-status.json
@@ -361,7 +361,10 @@ pipeline {
         // Step 19: Clean up old task definitions to avoid exceeding AWS limits
         stage('Cleanup Old ECS Revisions') {
             steps {
-                sh 'scripts/cleanup-ecs-revisions.sh ${ECS_TASK_FAMILY} ${KEEP_ECS_REVISIONS}'
+                sh '''
+                  docker run --rm --network host -v "${HOST_WORKSPACE}:/work" -w /work --entrypoint /bin/bash amazon/aws-cli \
+                    /work/scripts/cleanup-ecs-revisions.sh ${ECS_TASK_FAMILY} ${KEEP_ECS_REVISIONS}
+                '''
             }
         }
     }
