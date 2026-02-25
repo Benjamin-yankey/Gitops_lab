@@ -4,6 +4,9 @@ FROM node:20-alpine
 # Set the working directory inside the container
 WORKDIR /app
 
+# Patch OS vulnerabilities by upgrading all packages to their latest versions
+RUN apk upgrade --no-cache
+
 # Copy package.json and package-lock.json to install dependencies
 COPY package*.json ./
 # Install only production dependencies for a smaller image size
