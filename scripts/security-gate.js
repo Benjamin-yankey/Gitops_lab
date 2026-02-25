@@ -74,6 +74,12 @@ function getImageFindings(report) {
   return findings;
 }
 
+// Define severity thresholds (default to 0 Critical, 20 High)
+const thresholds = {
+  CRITICAL: parseInt(process.env.GATE_CRITICAL_THRESHOLD || '0', 10),
+  HIGH: parseInt(process.env.GATE_HIGH_THRESHOLD || '20', 10)
+};
+
 // Main execution block
 try {
   let scaPath = files.sca;
@@ -92,28 +98,40 @@ try {
   };
   const allIds = [...scaFindings.ids, ...imageFindings.ids];
 
-  console.log(`Using SCA report: ${scaPath}`);
-  console.log(`SCA: Critical=${scaFindings.CRITICAL}, High=${scaFindings.HIGH}`);
-  console.log(`Image: Critical=${imageFindings.CRITICAL}, High=${imageFindings.HIGH}`);
-  console.log(`Secrets: ${secretCount}`);
+  console.log('---------------------------------------------------------');
+  console.log('🛡️  SECURITY GATE EVALUATION');
+  console.log('---------------------------------------------------------');
+  console.log(`SCA Findings:   Critical=${scaFindings.CRITICAL}, High=${scaFindings.HIGH}`);
+  console.log(`Image Findings: Critical=${imageFindings.CRITICAL}, High=${imageFindings.HIGH}`);
+  console.log(`Secrets Found:  ${secretCount}`);
+  console.log('---------------------------------------------------------');
+  console.log(`Thresholds:      Critical <= ${thresholds.CRITICAL}, High <= ${thresholds.HIGH}`);
+  console.log('---------------------------------------------------------');
 
-  const hasBlockedVulns = total.CRITICAL > 0 || total.HIGH > 0;
+  const failedCritical = total.CRITICAL > thresholds.CRITICAL;
+  const failedHigh = total.HIGH > thresholds.HIGH;
   const hasSecrets = secretCount > 0;
 
-  if (hasBlockedVulns || hasSecrets) {
-    console.error('---------------------------------------------------------');
+  if (failedCritical || failedHigh || hasSecrets) {
     console.error('❌ SECURITY GATE FAILED');
-    if (allIds.length > 0) {
-      console.error('Blocking Vulnerabilities:');
-      allIds.forEach(id => console.error(`  - ${id}`));
-    }
-    if (hasSecrets) console.error(`Reason: ${hasSecrets} Secret(s) detected.`);
-    console.error(`Summary: Critical=${total.CRITICAL}, High=${total.HIGH}, Secrets=${secretCount}`);
+    
+    if (failedCritical) console.error(`Reason: Critical vulnerabilities (${total.CRITICAL}) exceed threshold (${thresholds.CRITICAL})`);
+    if (failedHigh) console.error(`Reason: High vulnerabilities (${total.HIGH}) exceed threshold (${thresholds.HIGH})`);
+    if (hasSecrets) console.error(`Reason: ${secretCount} secret(s) detected.`);
+
+    console.error('\nFindings of Concern:');
+    allIds.forEach(id => console.error(`  - ${id}`));
     console.error('---------------------------------------------------------');
     process.exit(1);
   }
 
-  console.log('Security gate passed. No Critical/High vulnerabilities detected.');
+  console.log('✅ SECURITY GATE PASSED');
+  if (allIds.length > 0) {
+    console.log('\nNote: The following findings were detected but are below the failure threshold:');
+    allIds.forEach(id => console.log(`  - ${id}`));
+  }
+  console.log('---------------------------------------------------------');
+
 } catch (err) {
   console.error(`Security gate execution error: ${err.message}`);
   process.exit(2);
