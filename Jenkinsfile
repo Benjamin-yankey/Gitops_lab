@@ -188,13 +188,17 @@ pipeline {
                         }
                     }
 
-                    // 2. Ensure cache directory exists on host (if mounted)
-                    // We assume /opt/jenkins_home/nvd-cache is the intended persistent storage
-                    sh "mkdir -p /var/jenkins_home/nvd-cache"
+                    // 2. Proactively clear locks and fix permissions for the persistent cache
+                    // This prevents 'Unable to obtain an exclusive lock on the H2 database' errors
+                    sh """
+                        mkdir -p /var/jenkins_home/nvd-cache
+                        echo "Clearing stale ODC locks..."
+                        rm -f /var/jenkins_home/nvd-cache/*.lock.db
+                        chmod -R 777 /var/jenkins_home/nvd-cache
+                    """
 
                     // 3. Execute the scan
-                    // Note: We use --format JSON for reliability and speed (HTML generation can be fragile)
-                    // We also ensure proper quoting for paths with spaces (like 'James Mills')
+                    // Note: We use the HOST_WORKSPACE path for the source and host cache path for the data
                     def apiFlag = nvdKey ? "--nvdApiKey '${nvdKey}'" : ""
                     sh """
                         docker run --rm \
