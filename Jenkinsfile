@@ -419,6 +419,86 @@ pipeline {
                 '''
             }
         }
+
+        // Step 20: Post-deployment health check to verify the application is serving traffic
+        stage('Post-Deploy Health Check') {
+            steps {
+                script {
+                    // Get the public IP of the running ECS task
+                    def taskIp = sh(
+                        script: '''
+                            docker run --rm --network host amazon/aws-cli ecs list-tasks \
+                                --cluster ${ECS_CLUSTER} \
+                                --service-name ${ECS_SERVICE} \
+                                --region ${AWS_REGION} \
+                                --query 'taskArns[0]' \
+                                --output text | xargs -I {} \
+                            docker run --rm --network host amazon/aws-cli ecs describe-tasks \
+                                --cluster ${ECS_CLUSTER} \
+                                --tasks {} \
+                                --region ${AWS_REGION} \
+                                --query 'tasks[0].attachments[0].details[?name==`networkInterfaceId`].value' \
+                                --output text | xargs -I {} \
+                            docker run --rm --network host amazon/aws-cli ec2 describe-network-interfaces \
+                                --network-interface-ids {} \
+                                --region ${AWS_REGION} \
+                                --query 'NetworkInterfaces[0].Association.PublicIp' \
+                                --output text
+                        ''',
+                        returnStdout: true
+                    ).trim()
+                    
+                    if (taskIp && taskIp != 'None' && taskIp != 'null') {
+                        echo "✅ Found ECS task public IP: ${taskIp}"
+                        
+                        // Test the health endpoint with retries
+                        def healthCheckPassed = false
+                        for (int i = 1; i <= 5; i++) {
+                            try {
+                                def response = sh(
+                                    script: "curl -f -s -o /dev/null -w '%{http_code}' http://${taskIp}:5000/health || echo 'FAILED'",
+                                    returnStdout: true
+                                ).trim()
+                                
+                                if (response == '200') {
+                                    echo "✅ Health check PASSED (attempt ${i}/5): HTTP ${response}"
+                                    healthCheckPassed = true
+                                    break
+                                } else {
+                                    echo "⚠️  Health check attempt ${i}/5 failed: ${response}"
+                                }
+                            } catch (Exception e) {
+                                echo "⚠️  Health check attempt ${i}/5 failed with exception: ${e.message}"
+                            }
+                            
+                            if (i < 5) {
+                                echo "Waiting 10 seconds before retry..."
+                                sleep(10)
+                            }
+                        }
+                        
+                        if (!healthCheckPassed) {
+                            error "❌ DEPLOYMENT FAILED: Application is not responding to health checks at http://${taskIp}:5000/health"
+                        }
+                        
+                        // Test the main application endpoint
+                        def appResponse = sh(
+                            script: "curl -f -s -o /dev/null -w '%{http_code}' http://${taskIp}:5000/ || echo 'FAILED'",
+                            returnStdout: true
+                        ).trim()
+                        
+                        if (appResponse == '200') {
+                            echo "✅ Application endpoint PASSED: HTTP ${appResponse}"
+                            echo "🚀 DEPLOYMENT SUCCESSFUL: Application is live at http://${taskIp}:5000"
+                        } else {
+                            error "❌ DEPLOYMENT FAILED: Application endpoint returned: ${appResponse}"
+                        }
+                    } else {
+                        error "❌ DEPLOYMENT FAILED: Could not retrieve ECS task public IP"
+                    }
+                }
+            }
+        }
     }
 
     // Post-pipeline execution cleanup and notification

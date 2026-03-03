@@ -21,6 +21,8 @@ crash.*.log
 # Build/test artifacts
 coverage/
 reports/**/*.xml
+test-output.json
+test-results/
 
 # OS/editor
 .DS_Store
