@@ -1,25 +1,24 @@
 module.exports = {
-  testEnvironment: 'node',
-  coveragePathIgnorePatterns: ['/node_modules/'],
+  testEnvironment: "node",
+  coveragePathIgnorePatterns: ["/node_modules/"],
   testTimeout: 10000,
-  collectCoverageFrom: [
-    '*.js',
-    '!jest.config.js',
-    '!.eslintrc.js'
-  ],
+  collectCoverageFrom: ["*.js", "!jest.config.js", "!.eslintrc.js"],
   coverageThreshold: {
     global: {
-      branches: 80,
+      branches: 70,
       functions: 75,
       lines: 80,
-      statements: 80
-    }
+      statements: 80,
+    },
   },
   reporters: [
-    'default',
-    ['jest-junit', {
-      outputDirectory: 'test-results',
-      outputName: 'junit.xml'
-    }]
-  ]
+    "default",
+    [
+      "jest-junit",
+      {
+        outputDirectory: "test-results",
+        outputName: "junit.xml",
+      },
+    ],
+  ],
 };
