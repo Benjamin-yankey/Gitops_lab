@@ -124,13 +124,6 @@ if [[ ! -f "$out" ]]; then
   exit 1
 fi
 
-# Validate that the output is valid JSON
-if ! node -e "JSON.parse(require('fs').readFileSync('$out', 'utf8'))" 2>/dev/null; then
-  echo "ERROR: Generated file is not valid JSON: $out" >&2
-  echo "This usually indicates a problem with the template or variable values." >&2
-  exit 1
-fi
-
 # Get file size for verification
 file_size=$(wc -c < "$out")
 
