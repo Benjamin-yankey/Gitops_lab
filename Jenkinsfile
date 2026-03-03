@@ -21,7 +21,7 @@ pipeline {
         booleanParam(name: 'ENABLE_SONARQUBE', defaultValue: true, description: 'Run SonarQube analysis and quality gate (requires Jenkins SonarQube plugin/config)')
         string(name: 'SONARQUBE_SERVER', defaultValue: 'sonarqube', description: 'Jenkins SonarQube server configuration name')
         string(name: 'GITLEAKS_IMAGE', defaultValue: 'ghcr.io/gitleaks/gitleaks:latest', description: 'Container image used for secret scanning')
-        choice(name: 'DEPLOYMENT_STRATEGY', choices: ['rolling'], description: 'Deployment strategy (rolling implemented in this pipeline)')
+        choice(name: 'DEPLOYMENT_STRATEGY', choices: ['rolling', 'blue-green'], description: 'Deployment strategy: rolling (ECS native) or blue-green (CodeDeploy)')
         booleanParam(name: 'APPLY_ECR_LIFECYCLE_POLICY', defaultValue: true, description: 'Apply ecs/ecr-lifecycle-policy.json to ECR')
         string(name: 'KEEP_ECS_REVISIONS', defaultValue: '10', description: 'Number of ECS task definition revisions to keep active')
     }
@@ -381,32 +381,123 @@ pipeline {
             }
         }
 
-        // Step 18: Trigger a rolling deployment update to the ECS service
+        // Step 18: Deploy using selected strategy (rolling or blue-green)
         stage('Deploy to ECS Service') {
-            when {
-                expression { return params.DEPLOYMENT_STRATEGY == 'rolling' }
-            }
             steps {
-                sh '''
-                  TASK_DEF_ARN=$(cat ${DEPLOY_DIR}/taskdef-arn.txt)
+                script {
+                    if (params.DEPLOYMENT_STRATEGY == 'blue-green') {
+                        // Blue/Green deployment with CodeDeploy
+                        echo "🔵🟢 Starting Blue/Green deployment with CodeDeploy..."
+                        
+                        def taskDefArn = sh(
+                            script: "cat ${env.DEPLOY_DIR}/taskdef-arn.txt",
+                            returnStdout: true
+                        ).trim()
+                        
+                        // Create CodeDeploy application revision
+                        sh """
+                            # Create appspec.yml for CodeDeploy
+                            cat > appspec.yml << 'EOF'
+version: 0.0
+Resources:
+  - TargetService:
+      Type: AWS::ECS::Service
+      Properties:
+        TaskDefinition: "${taskDefArn}"
+        LoadBalancerInfo:
+          ContainerName: "node-app"
+          ContainerPort: 5000
+        PlatformVersion: "LATEST"
+Hooks:
+  - BeforeInstall:
+      - location: scripts/codedeploy-hooks/before-install.sh
+        timeout: 300
+        runas: root
+  - AfterInstall:
+      - location: scripts/codedeploy-hooks/after-install.sh
+        timeout: 300
+        runas: root
+  - ApplicationStart:
+      - location: scripts/codedeploy-hooks/application-start.sh
+        timeout: 300
+        runas: root
+  - ApplicationStop:
+      - location: scripts/codedeploy-hooks/application-stop.sh
+        timeout: 300
+        runas: root
+  - ValidateService:
+      - location: scripts/codedeploy-hooks/validate-service.sh
+        timeout: 300
+        runas: root
+EOF
+                        """
+                        
+                        // Start CodeDeploy deployment
+                        sh """
+                            docker run --rm --network host amazon/aws-cli deploy create-deployment \
+                                --application-name "${env.APP_NAME}-codedeploy" \
+                                --deployment-group-name "${env.APP_NAME}-dg" \
+                                --deployment-config-name "CodeDeployDefault.ECSBlueGreenCanary10Percent5Minutes" \
+                                --description "Blue/Green deployment for build ${env.BUILD_TAG_VERSION}" \
+                                --revision '{"revisionType":"AppSpecContent","appSpecContent":{"content":"'\$(cat appspec.yml | base64 -w 0)'"}}' \
+                                --region ${params.AWS_REGION} \
+                                --query 'deploymentId' \
+                                --output text > ${env.DEPLOY_DIR}/codedeploy-deployment-id.txt
+                        """
+                        
+                        def deploymentId = sh(
+                            script: "cat ${env.DEPLOY_DIR}/codedeploy-deployment-id.txt",
+                            returnStdout: true
+                        ).trim()
+                        
+                        echo "🚀 CodeDeploy deployment started: ${deploymentId}"
+                        
+                        // Wait for deployment to complete with timeout
+                        timeout(time: 30, unit: 'MINUTES') {
+                            sh """
+                                docker run --rm --network host amazon/aws-cli deploy wait deployment-successful \
+                                    --deployment-id "${deploymentId}" \
+                                    --region ${params.AWS_REGION}
+                            """
+                        }
+                        
+                        // Get final deployment status
+                        sh """
+                            docker run --rm --network host amazon/aws-cli deploy get-deployment \
+                                --deployment-id "${deploymentId}" \
+                                --region ${params.AWS_REGION} > ${env.DEPLOY_DIR}/codedeploy-status.json
+                        """
+                        
+                        echo "✅ Blue/Green deployment completed successfully!"
+                        
+                    } else {
+                        // Rolling deployment (existing logic)
+                        echo "🔄 Starting Rolling deployment..."
+                        
+                        sh '''
+                          TASK_DEF_ARN=$(cat ${DEPLOY_DIR}/taskdef-arn.txt)
 
-                  docker run --rm --network host amazon/aws-cli ecs update-service \
-                    --cluster ${ECS_CLUSTER} \
-                    --service ${ECS_SERVICE} \
-                    --task-definition "$TASK_DEF_ARN" \
-                    --force-new-deployment \
-                    --region ${AWS_REGION} > ${DEPLOY_DIR}/ecs-update-service.json
+                          docker run --rm --network host amazon/aws-cli ecs update-service \
+                            --cluster ${ECS_CLUSTER} \
+                            --service ${ECS_SERVICE} \
+                            --task-definition "$TASK_DEF_ARN" \
+                            --force-new-deployment \
+                            --region ${AWS_REGION} > ${DEPLOY_DIR}/ecs-update-service.json
 
-                  docker run --rm --network host amazon/aws-cli ecs wait services-stable \
-                    --cluster ${ECS_CLUSTER} \
-                    --services ${ECS_SERVICE} \
-                    --region ${AWS_REGION}
+                          docker run --rm --network host amazon/aws-cli ecs wait services-stable \
+                            --cluster ${ECS_CLUSTER} \
+                            --services ${ECS_SERVICE} \
+                            --region ${AWS_REGION}
 
-                  docker run --rm --network host amazon/aws-cli ecs describe-services \
-                    --cluster ${ECS_CLUSTER} \
-                    --services ${ECS_SERVICE} \
-                    --region ${AWS_REGION} > ${DEPLOY_DIR}/ecs-service-status.json
-                '''
+                          docker run --rm --network host amazon/aws-cli ecs describe-services \
+                            --cluster ${ECS_CLUSTER} \
+                            --services ${ECS_SERVICE} \
+                            --region ${AWS_REGION} > ${DEPLOY_DIR}/ecs-service-status.json
+                        '''
+                        
+                        echo "✅ Rolling deployment completed successfully!"
+                    }
+                }
             }
         }
 
