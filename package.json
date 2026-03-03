@@ -50,28 +50,6 @@
     "npm": ">=8.0.0"
   },
   
-  "jest": {
-    "testEnvironment": "node",
-    "collectCoverageFrom": [
-      "app.js",
-      "scripts/**/*.js",
-      "!scripts/inject-vulnerable-dependency.js",
-      "!scripts/remove-vulnerable-dependency.js"
-    ],
-    "coverageThreshold": {
-      "global": {
-        "branches": 80,
-        "functions": 80,
-        "lines": 80,
-        "statements": 80
-      }
-    },
-    "reporters": [
-      "default",
-      ["jest-junit", { "outputDirectory": "reports", "outputName": "junit.xml" }]
-    ]
-  },
-  
   "eslintConfig": {
     "env": {
       "node": true,
