@@ -125,7 +125,7 @@ if [[ ! -f "$out" ]]; then
 fi
 
 # Validate that the output is valid JSON
-if ! python3 -m json.tool "$out" >/dev/null 2>&1; then
+if ! node -e "JSON.parse(require('fs').readFileSync('$out', 'utf8'))" 2>/dev/null; then
   echo "ERROR: Generated file is not valid JSON: $out" >&2
   echo "This usually indicates a problem with the template or variable values." >&2
   exit 1
