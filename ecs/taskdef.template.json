@@ -28,24 +28,8 @@
           "value": "__APP_VERSION__"
         },
         {
-          "name": "DB_HOST",
-          "valueFrom": "__DB_SECRET_ARN__:host::"
-        },
-        {
-          "name": "DB_PORT",
-          "valueFrom": "__DB_SECRET_ARN__:port::"
-        },
-        {
-          "name": "DB_NAME",
-          "valueFrom": "__DB_SECRET_ARN__:dbname::"
-        },
-        {
-          "name": "DB_USER",
-          "valueFrom": "__DB_SECRET_ARN__:username::"
-        },
-        {
-          "name": "DB_PASSWORD",
-          "valueFrom": "__DB_SECRET_ARN__:password::"
+          "name": "PORT",
+          "value": "5000"
         }
       ],
       "readonlyRootFilesystem": true,
@@ -63,7 +47,10 @@
         }
       },
       "healthCheck": {
-        "command": ["CMD-SHELL", "curl -f http://localhost:5000/health || exit 1"],
+        "command": [
+          "CMD-SHELL",
+          "curl -f http://localhost:5000/health || exit 1"
+        ],
         "interval": 30,
         "timeout": 5,
         "retries": 3,
