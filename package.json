@@ -34,7 +34,8 @@
   },
   
   "dependencies": {
-    "express": "^4.22.1"
+    "express": "^4.22.1",
+    "pg": "^8.11.3"
   },
   
   "devDependencies": {
