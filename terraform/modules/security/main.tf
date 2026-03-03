@@ -1,7 +1,13 @@
+# Security Groups Module
+# Defines network access control for Jenkins and Application EC2 instances
+# Implements principle of least privilege
+
+# Jenkins Security Group - Allows SSH and Jenkins web UI access
 resource "aws_security_group" "jenkins" {
   name_prefix = "${var.project_name}-${var.environment}-jenkins-"
   vpc_id      = var.vpc_id
 
+  # Allow SSH from specified IP addresses only
   ingress {
     description = "SSH"
     from_port   = 22
@@ -10,6 +16,7 @@ resource "aws_security_group" "jenkins" {
     cidr_blocks = var.allowed_ips
   }
 
+  # Allow Jenkins web UI access from specified IP addresses
   ingress {
     description = "Jenkins Web UI"
     from_port   = 8080
@@ -69,10 +76,12 @@ resource "aws_security_group" "jenkins" {
   }
 }
 
+# Application Server Security Group - Allows SSH and app port access
 resource "aws_security_group" "app" {
   name_prefix = "${var.project_name}-${var.environment}-app-"
   vpc_id      = var.vpc_id
 
+  # Allow SSH from specified IP addresses
   ingress {
     description = "SSH"
     from_port   = 22
@@ -81,6 +90,7 @@ resource "aws_security_group" "app" {
     cidr_blocks = var.allowed_ips
   }
 
+  # Allow application access from specified IP addresses
   ingress {
     description = "Application Port"
     from_port   = 5000
@@ -89,6 +99,7 @@ resource "aws_security_group" "app" {
     cidr_blocks = var.app_allowed_ips
   }
 
+  # Allow SSH from Jenkins security group for deployment
   ingress {
     description     = "SSH from Jenkins"
     from_port       = 22

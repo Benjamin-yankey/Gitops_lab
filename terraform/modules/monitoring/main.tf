@@ -1,3 +1,8 @@
+# Monitoring Module
+# Creates CloudWatch log groups and metric alarms for observability
+# Monitors Jenkins, App Server, ECS services, and VPC flow logs
+
+# Jenkins CloudWatch Log Group
 resource "aws_cloudwatch_log_group" "jenkins" {
   name              = "/aws/ec2/${var.project_name}-${var.environment}-jenkins"
   retention_in_days = 90
@@ -7,6 +12,7 @@ resource "aws_cloudwatch_log_group" "jenkins" {
   }
 }
 
+# Application Server CloudWatch Log Group
 resource "aws_cloudwatch_log_group" "app" {
   name              = "/aws/ec2/${var.project_name}-${var.environment}-app"
   retention_in_days = 90
@@ -16,6 +22,7 @@ resource "aws_cloudwatch_log_group" "app" {
   }
 }
 
+# Jenkins CPU Utilization Alarm
 resource "aws_cloudwatch_metric_alarm" "jenkins_cpu" {
   alarm_name          = "${var.project_name}-${var.environment}-jenkins-high-cpu"
   comparison_operator = "GreaterThanThreshold"
@@ -53,6 +60,7 @@ resource "aws_cloudwatch_metric_alarm" "app_cpu" {
   alarm_description = "Alert when App server CPU exceeds 80%"
 }
 
+# VPC Flow Logs - Capture network traffic for security analysis
 resource "aws_flow_log" "vpc" {
   vpc_id          = var.vpc_id
   traffic_type    = "ALL"
@@ -64,6 +72,7 @@ resource "aws_flow_log" "vpc" {
   }
 }
 
+# VPC Flow Logs CloudWatch Log Group
 resource "aws_cloudwatch_log_group" "vpc_flow_logs" {
   name              = "/aws/vpc/${var.project_name}-${var.environment}"
   retention_in_days = 90
@@ -73,6 +82,7 @@ resource "aws_cloudwatch_log_group" "vpc_flow_logs" {
   }
 }
 
+# IAM Role for VPC Flow Logs
 resource "aws_iam_role" "flow_logs" {
   name = "${var.project_name}-${var.environment}-vpc-flow-logs-role"
 
@@ -88,6 +98,7 @@ resource "aws_iam_role" "flow_logs" {
   })
 }
 
+# IAM Policy for VPC Flow Logs to write to CloudWatch
 resource "aws_iam_role_policy" "flow_logs" {
   name = "${var.project_name}-${var.environment}-vpc-flow-logs-policy"
   role = aws_iam_role.flow_logs.id
@@ -111,6 +122,7 @@ resource "aws_iam_role_policy" "flow_logs" {
   })
 }
 
+# ECS CPU Utilization Alarm
 resource "aws_cloudwatch_metric_alarm" "ecs_cpu" {
   count = var.enable_ecs_alarms ? 1 : 0
 
@@ -135,6 +147,7 @@ resource "aws_cloudwatch_metric_alarm" "ecs_cpu" {
   }
 }
 
+# ECS Memory Utilization Alarm
 resource "aws_cloudwatch_metric_alarm" "ecs_memory" {
   count = var.enable_ecs_alarms ? 1 : 0
 

@@ -13,6 +13,11 @@ output "service_name" {
   value       = aws_ecs_service.app.name
 }
 
+output "service_arn" {
+  description = "ARN of the ECS service"
+  value       = aws_ecs_service.app.id
+}
+
 output "task_definition_family" {
   description = "Task definition family name"
   value       = aws_ecs_task_definition.app.family
@@ -41,4 +46,9 @@ output "log_group_name" {
 output "log_group_arn" {
   description = "CloudWatch log group ARN for ECS"
   value       = aws_cloudwatch_log_group.ecs.arn
+}
+
+output "container_port" {
+  description = "Port the container listens on"
+  value       = var.container_port
 }

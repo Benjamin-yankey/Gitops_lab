@@ -548,17 +548,45 @@ Choose **AWS Credentials** or **Secret text** and add:
 
 > Alternatively, attach an IAM Instance Profile to the Jenkins EC2 instance (more secure, no keys needed).
 
-### 4.5 Configure SonarQube (Optional)
+### 4.5 Configure SonarCloud Credentials (Optional)
 
-If you want to use the SAST scan:
+If you want to use the SAST scan with SonarCloud:
 
-1. Go to **Manage Jenkins → Configure System → SonarQube servers**
-2. Add a server:
-   - Name: `sonarqube` (must match the `SONARQUBE_SERVER` parameter)
-   - Server URL: `http://<sonarqube-ip>:9000`
-   - Authentication token: create one in SonarQube and add it here
+#### Step 1: Create SonarCloud Account & Project
+1. **Go to https://sonarcloud.io**
+2. **Sign in with GitHub**
+3. **Create organization: `benjamin-yankey`** (or your GitHub username)
+4. **Import project: `benjamin-yankey_cicd-node-app`** (or your repo name)
 
-> If you don't have SonarQube, leave `ENABLE_SONARQUBE` as `false` — the pipeline will skip it.
+#### Step 2: Generate SonarCloud Token
+1. **SonarCloud → My Account → Security**
+2. **Generate Token:**
+   - Name: `jenkins-token`
+   - Type: `User Token`
+   - Expiration: `No expiration`
+3. **Copy the token** (starts with `squ_`)
+
+#### Step 3: Add Token to Jenkins
+1. **Jenkins → Manage Jenkins → Credentials**
+2. **System → Global → Add Credentials**
+3. **Kind:** `Secret text`
+4. **Secret:** `[paste your SonarCloud token]`
+5. **ID:** `sonarcloud-token`
+6. **Description:** `SonarCloud API Token`
+7. **Save**
+
+#### Step 4: Configure SonarQube Server in Jenkins
+1. **Manage Jenkins → Configure System**
+2. **SonarQube servers section → Add SonarQube**
+3. **Name:** `sonarqube`
+4. **Server URL:** `https://sonarcloud.io`
+5. **Server authentication token:** Select `sonarcloud-token`
+6. **Save**
+
+#### Step 5: Enable SonarQube in Pipeline
+Set `ENABLE_SONARQUBE` = `true` when running the Jenkins job.
+
+> If you don't want to set up SonarCloud, leave `ENABLE_SONARQUBE` as `false` — the pipeline will skip SAST and run all other security scans.
 
 ### 4.6 Create the Pipeline Job
 
@@ -1136,12 +1164,20 @@ Managed multiple instances of `ExpiredToken` errors during AWS CLI and Terraform
 
 ### Q: How do I see my deployed app?
 
-**A:** After successful deployment:
+**A:** After successful Jenkins deployment, the app runs on AWS ECS Fargate with a dynamic IP:
 
-1. Go to **AWS Console → ECS → Clusters → cicd-node-cluster → Services → cicd-node-service → Tasks**
-2. Click on the running task
-3. Find the public IP (if `assignPublicIp=ENABLED`)
-4. Open `http://<public-ip>:5000/health`
+```bash
+# Get the ECS app URL
+cd terraform
+terraform output ecs_app_url
+
+# Or manually get the task IP:
+TASK_ARN=$(aws ecs list-tasks --cluster cicd-node-cluster --service-name cicd-node-service --query 'taskArns[0]' --output text)
+TASK_IP=$(aws ecs describe-tasks --cluster cicd-node-cluster --tasks $TASK_ARN --query 'tasks[0].attachments[0].details[?name==`networkInterfaceId`].value' --output text | xargs -I {} aws ec2 describe-network-interfaces --network-interface-ids {} --query 'NetworkInterfaces[0].Association.PublicIp' --output text)
+echo "App URL: http://$TASK_IP:5000"
+```
+
+**Important:** The app is only available after Jenkins successfully deploys it to ECS. The legacy EC2 instance is empty.
 
 ### Q: What if I get charged too much?
 

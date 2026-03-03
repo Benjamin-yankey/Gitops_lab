@@ -36,21 +36,52 @@ output "jenkins_password_secret_arn" {
 }
 
 # ─────────────────────────────────────────────────────────────
-# Legacy App Server Outputs
+# Application URLs
 # ─────────────────────────────────────────────────────────────
-output "app_server_public_ip" {
-  description = "Public IP address of application server"
-  value       = module.app_server.public_ip
+output "app_url_legacy" {
+  description = "Legacy EC2 application URL (empty - use ECS instead)"
+  value       = "http://${module.app_server.public_ip}:5000 (LEGACY - NOT USED)"
 }
 
-output "app_url" {
-  description = "Application URL (legacy EC2)"
-  value       = "http://${module.app_server.public_ip}:5000"
+output "ecs_app_instructions" {
+  description = "How to access the ECS-deployed application"
+  value = <<-EOT
+    
+    🚀 ECS APPLICATION ACCESS:
+    
+    The application runs on AWS ECS Fargate with dynamic IPs.
+    After a successful Jenkins pipeline deployment:
+    
+    1. Get the running task IP:
+       aws ecs describe-tasks --cluster ${module.ecs.cluster_name} --tasks $(aws ecs list-tasks --cluster ${module.ecs.cluster_name} --service-name ${module.ecs.service_name} --query 'taskArns[0]' --output text) --query 'tasks[0].attachments[0].details[?name==`networkInterfaceId`].value' --output text | xargs -I {} aws ec2 describe-network-interfaces --network-interface-ids {} --query 'NetworkInterfaces[0].Association.PublicIp' --output text
+    
+    2. Access the app:
+       http://[TASK_PUBLIC_IP]:${module.ecs.container_port}
+    
+    3. Or use the helper command:
+       terraform output ecs_app_url
+    
+  EOT
 }
 
-output "ssh_app_server" {
-  description = "SSH command for application server"
-  value       = "ssh -i ${module.keypair.private_key_path} ec2-user@${module.app_server.public_ip}"
+# Dynamic ECS app URL (only works after deployment)
+data "aws_ecs_service" "app" {
+  service_name = module.ecs.service_name
+  cluster_arn  = module.ecs.cluster_arn
+  depends_on   = [module.ecs]
+}
+
+output "ecs_app_url" {
+  description = "ECS application URL (available after Jenkins deployment)"
+  value = <<-EOT
+    
+    To get the current ECS app URL, run:
+    
+    TASK_ARN=$(aws ecs list-tasks --cluster ${module.ecs.cluster_name} --service-name ${module.ecs.service_name} --query 'taskArns[0]' --output text)
+    TASK_IP=$(aws ecs describe-tasks --cluster ${module.ecs.cluster_name} --tasks $TASK_ARN --query 'tasks[0].attachments[0].details[?name==`networkInterfaceId`].value' --output text | xargs -I {} aws ec2 describe-network-interfaces --network-interface-ids {} --query 'NetworkInterfaces[0].Association.PublicIp' --output text)
+    echo "ECS App URL: http://$TASK_IP:${module.ecs.container_port}"
+    
+  EOT
 }
 
 # ─────────────────────────────────────────────────────────────

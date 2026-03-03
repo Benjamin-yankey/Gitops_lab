@@ -1,3 +1,8 @@
+# VPC Endpoints Module
+# Creates private endpoints for AWS services to avoid internet traffic
+# Enables secure communication between VPC and AWS services
+
+# S3 Gateway Endpoint - For S3 bucket access without internet
 resource "aws_vpc_endpoint" "s3" {
   vpc_id          = var.vpc_id
   service_name    = "com.amazonaws.${var.aws_region}.s3"
@@ -8,6 +13,7 @@ resource "aws_vpc_endpoint" "s3" {
   }
 }
 
+# Secrets Manager Interface Endpoint - Private access to Secrets Manager
 resource "aws_vpc_endpoint" "secretsmanager" {
   vpc_id              = var.vpc_id
   service_name        = "com.amazonaws.${var.aws_region}.secretsmanager"
@@ -21,6 +27,7 @@ resource "aws_vpc_endpoint" "secretsmanager" {
   }
 }
 
+# Security Group for VPC Endpoints
 resource "aws_security_group" "vpc_endpoints" {
   name_prefix = "${var.project_name}-${var.environment}-vpc-endpoints-"
   vpc_id      = var.vpc_id

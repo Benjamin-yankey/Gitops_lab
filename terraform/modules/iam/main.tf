@@ -1,3 +1,7 @@
+# IAM Module for Jenkins
+# Creates IAM role and policies for Jenkins EC2 instance to interact with AWS services
+# Includes permissions for: Secrets Manager, ECR, ECS, and CloudWatch Logs
+
 resource "aws_iam_role" "jenkins" {
   name = "${var.project_name}-${var.environment}-jenkins-role"
 
@@ -134,6 +138,7 @@ resource "aws_iam_role_policy" "jenkins_logs" {
   })
 }
 
+# Instance Profile - Required for EC2 to assume the IAM role
 resource "aws_iam_instance_profile" "jenkins" {
   name = "${var.project_name}-${var.environment}-jenkins-profile"
   role = aws_iam_role.jenkins.name

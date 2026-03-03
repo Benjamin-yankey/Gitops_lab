@@ -1,3 +1,7 @@
+# VPC Module
+# Creates a Virtual Private Cloud with public and private subnets
+# Includes internet gateway for public subnet internet access
+
 resource "aws_vpc" "main" {
   cidr_block           = var.vpc_cidr
   enable_dns_hostnames = true
@@ -8,6 +12,7 @@ resource "aws_vpc" "main" {
   }
 }
 
+# Internet Gateway - Provides internet access for public subnets
 resource "aws_internet_gateway" "main" {
   vpc_id = aws_vpc.main.id
 
@@ -16,6 +21,7 @@ resource "aws_internet_gateway" "main" {
   }
 }
 
+# Public Subnets - For resources that need internet access (ALB, NAT Gateway, Bastion)
 resource "aws_subnet" "public" {
   count = length(var.public_subnets)
 
@@ -30,6 +36,7 @@ resource "aws_subnet" "public" {
   }
 }
 
+# Private Subnets - For application servers and databases
 resource "aws_subnet" "private" {
   count = length(var.private_subnets)
 
@@ -43,6 +50,7 @@ resource "aws_subnet" "private" {
   }
 }
 
+# Public Route Table - Routes traffic to internet gateway
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
 
@@ -56,6 +64,7 @@ resource "aws_route_table" "public" {
   }
 }
 
+# Associate public subnets with public route table
 resource "aws_route_table_association" "public" {
   count = length(aws_subnet.public)
 
@@ -63,6 +72,7 @@ resource "aws_route_table_association" "public" {
   route_table_id = aws_route_table.public.id
 }
 
+# Private Route Tables - One per private subnet for isolation
 resource "aws_route_table" "private" {
   count = length(var.private_subnets)
 
@@ -73,6 +83,7 @@ resource "aws_route_table" "private" {
   }
 }
 
+# Associate private subnets with private route tables
 resource "aws_route_table_association" "private" {
   count = length(aws_subnet.private)
 

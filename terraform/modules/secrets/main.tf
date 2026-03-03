@@ -1,5 +1,9 @@
+# Secrets Manager Module
+# Stores sensitive credentials securely in AWS Secrets Manager
+# Includes Jenkins admin password and SSH key pair
+
 resource "aws_secretsmanager_secret" "jenkins_admin_password" {
-  name        = "${var.project_name}-${var.environment}-jenkins-admin-password"
+  name        = "${var.project_name}-${var.environment}-jenkins-admin-password-${formatdate("YYYYMMDD-hhmm", timestamp())}"
   description = "Jenkins admin password for CI/CD pipeline"
 
   tags = {
@@ -7,13 +11,15 @@ resource "aws_secretsmanager_secret" "jenkins_admin_password" {
   }
 }
 
+# Store the Jenkins admin password value
 resource "aws_secretsmanager_secret_version" "jenkins_admin_password" {
   secret_id     = aws_secretsmanager_secret.jenkins_admin_password.id
   secret_string = var.jenkins_admin_password
 }
 
+# SSH Key Pair Secret - Stores generated private and public keys
 resource "aws_secretsmanager_secret" "ssh_keypair" {
-  name        = "${var.project_name}-${var.environment}-ssh-keypair"
+  name        = "${var.project_name}-${var.environment}-ssh-keypair-${formatdate("YYYYMMDD-hhmm", timestamp())}"
   description = "Generated SSH key pair for EC2 access"
 
   tags = {
@@ -21,6 +27,7 @@ resource "aws_secretsmanager_secret" "ssh_keypair" {
   }
 }
 
+# Store the SSH key pair values
 resource "aws_secretsmanager_secret_version" "ssh_keypair" {
   secret_id = aws_secretsmanager_secret.ssh_keypair.id
   secret_string = jsonencode({
